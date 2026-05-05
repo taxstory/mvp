@@ -1,8 +1,6 @@
-// src/pages/app/Dashboard.jsx
-// Full 21-screen dashboard — see TaxStory_Platform_v2.html for complete implementation
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../../context/AuthContext';
-import { useSubscription } from '../../../hooks/useSubscription';
+import { useAuth } from '../../context/AuthContext';
+import { useSubscription } from '../../hooks/useSubscription';
 
 export default function Dashboard() {
   const { profile, signOut } = useAuth();
@@ -13,7 +11,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w7 h-7 rounded-lg bg-brand-purple flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-brand-purple flex items-center justify-center">
             <span className="text-white font-bold text-xs">TS</span>
           </div>
           <span className="font-serif font-bold text-lg text-brand-dark">TaxStory</span>
@@ -25,7 +23,7 @@ export default function Dashboard() {
         {isTrialing && (
           <div className="bg-brand-purple/10 border border-brand-purple/20 rounded-xl px-5 py-4 mb-8 flex items-center justify-between">
             <p className="text-sm text-brand-purple font-medium">
-               ⭐ You're on a free trial ·{' '}
+              ⭐ You're on a free trial ·{' '}
               <Link to="/billing" className="underline">Upgrade to keep access</Link>
             </p>
           </div>

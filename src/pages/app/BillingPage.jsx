@@ -1,6 +1,5 @@
-// src/pages/app/BillingPage.jsx
 import { Link } from 'react-router-dom';
-import { useSubscription } from '../../../hooks/useSubscription';
+import { useSubscription } from '../../hooks/useSubscription';
 
 export default function BillingPage() {
   const { tier, isTrialing, subscription } = useSubscription();
@@ -17,7 +16,7 @@ export default function BillingPage() {
             <p className="text-sm text-yellow-800 font-medium">You're on a free trial. Subscribe before your trial ends to keep access.</p>
           </div>
         )}
-        <Link to="/pricing" className="btn-primary inline-block text-sm">View Plans & Subscribe</Link>
+        <Link to="/pricing" className="btn-primary inline-block text-sm">View Plans &amp; Subscribe</Link>
       </div>
     </div>
   );
