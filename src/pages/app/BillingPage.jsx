@@ -1,6 +1,6 @@
 // src/pages/app/BillingPage.jsx
 import { Link } from 'react-router-dom';
-import { useSubscription } from '../../hooks/useSubscription';
+import { useSubscription } from '../../../hooks/useSubscription';
 
 export default function BillingPage() {
   const { tier, isTrialing, subscription } = useSubscription();
