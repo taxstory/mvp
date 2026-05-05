@@ -1,7 +1,7 @@
 // src/pages/auth/ResetPasswordPage.jsx
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function ResetPasswordPage() {
   const { resetPassword } = useAuth();

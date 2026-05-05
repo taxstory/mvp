@@ -1,13 +1,13 @@
 // src/pages/auth/SignUpPage.jsx
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function SignUpPage() {
   const { signUp }  = useAuth();
   const navigate    = useNavigate();
   const [form, setForm] = useState({ email: '', password: '', firmName: '', role: 'cpa' });
-  const [error,    setError]   = useState('');
+  const [error,    setError]    = useState('');
   const [loading,  setLoading] = useState(false);
   const [success,  setSuccess] = useState(false);
 
@@ -37,7 +37,7 @@ export default function SignUpPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <div className="p-6">
         <Link to="/" className="flex items-center gap-2 w-fit">
-          <div className="w-7 h-7 rounded-lg bg-brand-purple flex items-center justify-center">
+          <div className="w7 h-7 rounded-lg bg-brand-purple flex items-center justify-center">
             <span className="text-white font-bold text-xs">TS</span>
           </div>
           <span className="font-serif font-bold text-lg text-brand-dark">TaxStory</span>
