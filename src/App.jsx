@@ -2,19 +2,19 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Pages
-import LandingPage       from './pages/LandingPage';
-import LoginPage         from './pages/auth/LoginPage';
-import SignUpPage        from './pages/auth/SignUpPage';
-import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import Dashboard         from './pages/Dashboard';
-import CPAProjections    from './pages/cpa/CPAProjections';
-import CPAVideoGenerator from './pages/cpa/CPAVideoGenerator';
-import RIAProjections    from './pages/ria/RIAProjections';
-import BillingPage       from './pages/BillingPage';
-import SettingsPage      from './pages/SettingsPage';
-import PrivacyPolicy     from './pages/legal/PrivacyPolicy';
-import TermsOfService    from './pages/legal/TermsOfService';
-import DPA               from './pages/legal/DPA';
+import LandingPage       from './pages/pages/marketing/LandingPage';
+import LoginPage         from './pages/pages/auth/LoginPage';
+import SignUpPage        from './pages/pages/auth/SignUpPage';
+import ResetPasswordPage from './pages/pages/auth/ResetPasswordPage';
+import Dashboard         from './pages/pages/app/Dashboard';
+import CPAProjections    from './pages/pages/cpa/CPAProjections';
+import CPAVideoGenerator from './pages/pages/cpa/CPAVideoGenerator';
+import RIAProjections    from './pages/pages/ria/RIAProjections';
+import BillingPage       from './pages/pages/app/BillingPage';
+import SettingsPage      from './pages/pages/app/SettingsPage';
+import PrivacyPolicy     from './pages/pages/legal/PrivacyPolicy';
+import TermsOfService    from './pages/pages/legal/TermsOfService';
+import DPA               from './pages/pages/legal/DPA';
 
 function PrivateRoute({ children, allowedRoles }) {
   const { user, profile, loading } = useAuth();
