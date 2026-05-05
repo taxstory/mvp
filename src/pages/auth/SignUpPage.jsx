@@ -1,13 +1,12 @@
-// src/pages/auth/SignUpPage.jsx
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 export default function SignUpPage() {
   const { signUp }  = useAuth();
   const navigate    = useNavigate();
   const [form, setForm] = useState({ email: '', password: '', firmName: '', role: 'cpa' });
-  const [error,    setError]    = useState('');
+  const [error,    setError]   = useState('');
   const [loading,  setLoading] = useState(false);
   const [success,  setSuccess] = useState(false);
 
@@ -37,13 +36,12 @@ export default function SignUpPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <div className="p-6">
         <Link to="/" className="flex items-center gap-2 w-fit">
-          <div className="w7 h-7 rounded-lg bg-brand-purple flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-brand-purple flex items-center justify-center">
             <span className="text-white font-bold text-xs">TS</span>
           </div>
           <span className="font-serif font-bold text-lg text-brand-dark">TaxStory</span>
         </Link>
       </div>
-
       <div className="flex-1 flex items-center justify-center px-6 pb-12">
         <div className="w-full max-w-sm">
           <div className="bg-brand-purple/10 text-brand-purple text-xs font-semibold px-3 py-1.5 rounded-full w-fit mb-4">
@@ -51,11 +49,8 @@ export default function SignUpPage() {
           </div>
           <h1 className="font-serif text-3xl font-bold text-brand-dark mb-2">Create your account</h1>
           <p className="text-gray-500 text-sm mb-8">Start your free trial and join founding members who locked in early pricing.</p>
-
           {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-6">{error}</div>}
-
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Role selector */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">I am a…</label>
               <div className="grid grid-cols-2 gap-3">
@@ -71,7 +66,6 @@ export default function SignUpPage() {
                 ))}
               </div>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Firm Name</label>
               <input type="text" required value={form.firmName} onChange={update('firmName')}
@@ -87,19 +81,16 @@ export default function SignUpPage() {
               <input type="password" required minLength={8} value={form.password} onChange={update('password')}
                 className="input" placeholder="At least 8 characters" />
             </div>
-
             <button type="submit" disabled={loading}
               className="w-full bg-brand-purple hover:bg-purple-700 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50">
               {loading ? 'Creating account…' : 'Start Free Trial'}
             </button>
           </form>
-
           <p className="text-xs text-gray-400 text-center mt-4">
             By signing up you agree to our{' '}
             <Link to="/terms" className="underline">Terms of Service</Link> and{' '}
             <Link to="/privacy" className="underline">Privacy Policy</Link>.
           </p>
-
           <p className="text-center text-sm text-gray-500 mt-4">
             Already have an account?{' '}
             <Link to="/login" className="text-brand-purple font-medium hover:underline">Sign in</Link>
