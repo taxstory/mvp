@@ -1,0 +1,67 @@
+/* ─── ADA / WCAG 2.1 AA Additions ─── */
+
+/* 1. Skip to main content link */
+.ts-skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  background: var(--purple);
+  color: white;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 0 0 8px 0;
+  text-decoration: none;
+  z-index: 9999;
+  transition: top 0.1s;
+}
+.ts-skip-link:focus {
+  top: 0;
+}
+
+/* 2. Focus-visible rings — keyboard nav must be visible */
+:focus-visible {
+  outline: 3px solid var(--purple);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Remove outline on mouse click but keep for keyboard */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* 3. Sidebar nav links — ensure focus ring is visible on dark bg */
+.ts-ni:focus-visible {
+  outline: 3px solid #B8B0FF;
+  outline-offset: 2px;
+}
+
+/* 4. Buttons — minimum 44x44px touch target */
+.ts-btn {
+  min-height: 44px;
+  min-width: 44px;
+}
+.ts-btn-sm {
+  min-height: 36px;
+}
+
+/* 5. Form labels — sufficient contrast already, but ensure pointer */
+.ts-fl { cursor: default; }
+
+/* 6. Interactive elements must not rely on color alone */
+.ts-pill { font-weight: 700; } /* text label always present */
+
+/* 7. Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 8. High contrast mode support */
+@media (forced-colors: active) {
+  .ts-btn-primary { border: 2px solid ButtonText; }
+  .ts-ni.ts-active { border: 2px solid Highlight; }
+}
