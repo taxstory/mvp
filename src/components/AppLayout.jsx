@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSubscription } from '../hooks/useSubscription';
 
@@ -14,13 +14,11 @@ const NAV = [
   { section: 'Clients', items: [
     { to: '/clients',   icon: '👤', label: 'Client list' },
     { to: '/documents', icon: '🗂',  label: 'Documents' },
-    { to: '/messages',  icon: '💬', label: 'Messages',      badge: '3', badgeClass: 'ts-b-num' },
+    { to: '/messages',  icon: '💬', label: 'Messages', badge: '3', badgeClass: 'ts-b-num' },
     { to: '/intake',    icon: '📋', label: 'Client intake' },
-    { to: '/esign',     icon: '✍',  label: 'E-signatures' },
   ]},
   { section: 'Firm', items: [
-    { to: '/reports',  icon: '📄', label: 'Reports & exports' },
-    { to: '/invoices', icon: '💰', label: 'Invoicing' },
+    { to: '/reports', icon: '📄', label: 'Reports & exports' },
   ]},
   { section: 'Account', items: [
     { to: '/billing',  icon: '💳', label: 'Billing',       badge: 'Pro', badgeClass: 'ts-b-pro' },
@@ -30,15 +28,15 @@ const NAV = [
 ];
 
 export default function AppLayout() {
-  const { profile, signOut } = useAuth();
-  const { creditsRemaining } = useSubscription();
-  const navigate = useNavigate();
+  const { profile } = useAuth();
 
   const initials = profile?.firm_name
     ? profile.firm_name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
     : 'ZL';
 
   return (
+    <>
+      <a href="#main-content" className="ts-skip-link">Skip to main content</a>
     <div className="ts-shell">
       {/* ── Sidebar ── */}
       <aside className="ts-sidebar">
@@ -47,20 +45,27 @@ export default function AppLayout() {
           <div className="ts-logo-sub">AI for Tax Professionals</div>
         </div>
 
-        <nav className="ts-nav">
+        <nav className="ts-nav" aria-label="Main navigation">
           {NAV.map((group, gi) => (
             <div className="ts-nav-section" key={gi}>
-              {group.section && <div className="ts-nav-label">{group.section}</div>}
+              {group.section && (
+                <div className="ts-nav-label" id={`nav-group-${gi}`}>
+                  {group.section}
+                </div>
+              )}
               {group.items.map(item => (
                 <NavLink
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) => `ts-ni${isActive ? ' ts-active' : ''}`}
+                  aria-current={undefined}
                 >
-                  <span className="ts-ni-ic">{item.icon}</span>
+                  <span className="ts-ni-ic" aria-hidden="true">{item.icon}</span>
                   {item.label}
                   {item.badge && (
-                    <span className={`ts-ni-badge ${item.badgeClass}`}>{item.badge}</span>
+                    <span className={`ts-ni-badge ${item.badgeClass}`} aria-label={item.badgeClass === 'ts-b-num' ? `${item.badge} unread` : item.badge}>
+                      {item.badge}
+                    </span>
                   )}
                 </NavLink>
               ))}
@@ -69,11 +74,11 @@ export default function AppLayout() {
         </nav>
 
         <div className="ts-sidebar-footer">
-          <div className="ts-user-av">{initials}</div>
+          <div className="ts-user-av" aria-hidden="true">{initials}</div>
           <div>
             <div className="ts-user-name">{profile?.firm_name?.split(' ')[0] || 'Zach'} L.</div>
             <div className="ts-user-firm">
-              <span className="ts-status-dot" />
+              <span className="ts-status-dot" aria-hidden="true" />
               Pro · {profile?.firm_name || 'Lakeside Advisory'}
             </div>
           </div>
@@ -81,9 +86,10 @@ export default function AppLayout() {
       </aside>
 
       {/* ── Main ── */}
-      <main className="ts-main">
+      <main className="ts-main" id="main-content" tabIndex={-1}>
         <Outlet />
       </main>
     </div>
+    </>
   );
 }
