@@ -3,6 +3,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Pages
 import LandingPage       from './pages/marketing/LandingPage';
+import HowItWorksPage    from './pages/marketing/HowItWorksPage';
+import PricingPage       from './pages/marketing/PricingPage';
 import LoginPage         from './pages/auth/LoginPage';
 import SignUpPage        from './pages/auth/SignUpPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
@@ -46,8 +48,10 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public */}
+          {/* Public marketing */}
           <Route path="/"               element={<LandingPage />} />
+          <Route path="/how-it-works"   element={<HowItWorksPage />} />
+          <Route path="/pricing"        element={<PricingPage />} />
           <Route path="/privacy"        element={<PrivacyPolicy />} />
           <Route path="/terms"          element={<TermsOfService />} />
           <Route path="/dpa"            element={<DPA />} />
