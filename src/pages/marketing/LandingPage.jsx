@@ -34,7 +34,7 @@ const RIA_FEATURES = [
     desc: 'Model 5–20 years of federal tax liability with 2024 brackets, LTCG rates, NIIT, and RMD logic built in.',
   },
   {
-    icon: '⚖️',
+    icon: '⚡️',
     title: 'Scenario Comparisons',
     desc: 'Run Roth conversions, tax-loss harvesting, municipal bond shifts, and RMD strategies side by side.',
   },
@@ -45,10 +45,11 @@ const RIA_FEATURES = [
   },
 ];
 
+// NYCPA & AICPA removed — replaced with "Built for Professionals"
 const TRUST_SIGNALS = [
-  { icon: '🔒', label: 'PII-Free by Design', desc: 'Personal identifiers are never extracted from tax returns — not scrubbed, never collected.' },
-  { icon: '✅', label: 'SOC 2 Compliance', desc: 'Active SOC 2 Type I compliance process underway. Policy library and controls fully documented.' },
-  { icon: '🏛️', label: 'NYCPA & AICPA', desc: 'Active relationships with both associations. Built with CPA and RIA workflows at the center.' },
+  { icon: '🔒', label: 'PII-Free by Design',  desc: 'Personal identifiers are never extracted from tax returns — not scrubbed, never collected.' },
+  { icon: '✅', label: 'SOC 2 Compliance',     desc: 'Active SOC 2 Type I compliance process underway. Policy library and controls fully documented.' },
+  { icon: '🛠️', label: 'Built for Professionals', desc: 'Designed from the ground up around real CPA and RIA workflows — not adapted from a generic tool.' },
 ];
 
 export default function LandingPage() {
@@ -56,7 +57,7 @@ export default function LandingPage() {
     <div className="min-h-screen flex flex-col">
       <MarketingNav />
 
-      {/* ── Hero ─────────────────────────────────────────── */}
+      {/* ── Hero ── */}
       <section className="bg-brand-dark text-white py-24 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <span className="inline-block bg-brand-purple/30 text-purple-200 text-xs font-semibold px-4 py-1.5 rounded-full mb-6 tracking-wide uppercase">
@@ -83,7 +84,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Stats ────────────────────────────────────────── */}
+      {/* ── Stats ── */}
       <section className="bg-brand-purple py-12 px-6">
         <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
           {STATS.map(s => (
@@ -95,7 +96,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CPA Features ─────────────────────────────────── */}
+      {/* ── CPA Features ── */}
       <section className="py-20 px-6 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
@@ -115,7 +116,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── RIA Features ─────────────────────────────────── */}
+      {/* ── RIA Features ── */}
       <section className="py-20 px-6 bg-gray-50">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
@@ -135,7 +136,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Trust Signals ────────────────────────────────── */}
+      {/* ── Trust Signals ── */}
       <section className="py-20 px-6 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
@@ -154,7 +155,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Founding Member CTA ──────────────────────────── */}
+      {/* ── Founding Member CTA ── */}
       <section className="py-20 px-6 bg-brand-dark text-white">
         <div className="max-w-3xl mx-auto text-center">
           <span className="inline-block bg-yellow-400/20 text-yellow-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-6 tracking-wide uppercase">
