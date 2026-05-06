@@ -1,31 +1,366 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    font-family: 'Inter', system-ui, sans-serif;
-    background-color: #F0F2F5;
-    color: #1B2A4A;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  h1, h2, h3 {
-    font-family: 'Playfair Display', Georgia, serif;
-  }
+/* ─── TaxStory Brand Tokens ─── */
+:root {
+  --purple:  #6B5CE7;
+  --purple2: #8B7EF0;
+  --purple3: #EEEAFF;
+  --dark:    #1A1230;
+  --mid:     #3D2E80;
+  --white:   #FFFFFF;
+  --bg:      #F4F2FF;
+  --card:    #FFFFFF;
+  --border:  #E2DFF8;
+  --text:    #1A1433;
+  --muted:   #6B698A;
+  --green:   #22C55E;
+  --amber:   #F59E0B;
+  --red:     #EF4444;
+  --teal:    #0ABFBF;
 }
 
-@layer components {
-  .btn-primary {
-    @apply bg-teal-600 hover:bg-teal-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors duration-200;
-  }
-  .btn-secondary {
-    @apply border border-teal-600 text-teal-600 hover:bg-teal-50 font-semibold px-6 py-3 rounded-xl transition-colors duration-200;
-  }
-  .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
-  }
-  .input {
-    @apply w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent;
-  }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
 }
+
+/* ─── Shell ─── */
+.ts-shell { display: flex; height: 100vh; overflow: hidden; }
+.ts-main  { flex: 1; overflow-y: auto; background: var(--bg); }
+.ts-page  { padding: 28px; min-height: 100%; }
+
+/* ─── Sidebar ─── */
+.ts-sidebar {
+  width: 232px;
+  background: var(--dark);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+.ts-sidebar-logo {
+  padding: 22px 20px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.ts-logo-wordmark {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: white;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ts-logo-sub {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 2px;
+  font-weight: 500;
+}
+.ts-nav { padding: 16px 10px 8px; flex: 1; }
+.ts-nav-section { margin-bottom: 22px; }
+.ts-nav-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0 10px;
+  margin-bottom: 4px;
+}
+.ts-ni {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.5);
+  transition: background 0.12s, color 0.12s;
+  text-decoration: none;
+  position: relative;
+}
+.ts-ni:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
+.ts-ni.active, .ts-ni.ts-active { background: var(--purple); color: white; font-weight: 600; }
+.ts-ni-ic { width: 16px; text-align: center; flex-shrink: 0; font-size: 13px; }
+.ts-ni-badge {
+  margin-left: auto;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-weight: 700;
+}
+.ts-b-new  { background: rgba(255,193,7,0.2); color: #FFD60A; }
+.ts-b-pro  { background: rgba(91,79,232,0.4); color: #B8B0FF; }
+.ts-b-num  { background: var(--purple); color: white; }
+.ts-sidebar-footer {
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ts-user-av {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--purple);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: white; flex-shrink: 0;
+}
+.ts-user-name { font-size: 13px; font-weight: 600; color: white; }
+.ts-user-firm { font-size: 10px; color: rgba(255,255,255,0.38); margin-top: 1px; }
+.ts-status-dot {
+  display: inline-block; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--green); margin-right: 4px;
+}
+
+/* ─── Page Header ─── */
+.ts-page-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--dark);
+  letter-spacing: -0.3px;
+}
+.ts-page-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.ts-hrow { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+
+/* ─── Buttons ─── */
+.ts-btn {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 9px 18px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.12s, transform 0.08s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ts-btn:hover { opacity: 0.88; }
+.ts-btn:active { transform: scale(0.98); }
+.ts-btn-primary   { background: var(--purple); color: white; }
+.ts-btn-secondary { background: white; border: 1.5px solid var(--border); color: var(--dark); font-weight: 500; }
+.ts-btn-ghost     { background: var(--purple3); color: var(--purple); border: none; }
+.ts-btn-danger    { background: #FEE2E2; color: var(--red); border: none; }
+.ts-btn-sm        { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+
+/* ─── Cards ─── */
+.ts-card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+}
+.ts-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ts-card-sub { font-size: 11px; font-weight: 400; color: var(--muted); }
+
+/* ─── KPI Cards ─── */
+.ts-kpi {
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+.ts-kpi-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+.ts-kpi-val {
+  font-family: 'Playfair Display', serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--dark);
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+.ts-kpi-delta { font-size: 11px; margin-top: 4px; font-weight: 600; }
+.ts-delta-up { color: var(--green); }
+.ts-delta-dn { color: var(--red); }
+.ts-delta-nt { color: var(--muted); }
+
+/* ─── Grids ─── */
+.ts-g2  { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ts-g3  { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-bottom: 16px; }
+.ts-g4  { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin-bottom: 16px; }
+.ts-g5  { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 12px; margin-bottom: 16px; }
+.ts-g2m { display: grid; grid-template-columns: 1fr 300px; gap: 16px; margin-bottom: 16px; }
+.ts-g3b { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+.ts-split { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }
+.ts-split-wide { display: grid; grid-template-columns: 1fr 380px; gap: 18px; }
+
+/* ─── Hero Banner ─── */
+.ts-hero-banner {
+  background: var(--purple);
+  border-radius: 14px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+.ts-progress-track { flex: 1; background: rgba(255,255,255,0.2); border-radius: 4px; height: 6px; }
+.ts-progress-fill  { height: 6px; border-radius: 4px; background: white; }
+
+/* ─── Pills ─── */
+.ts-pill {
+  font-size: 10px; padding: 3px 9px; border-radius: 20px;
+  font-weight: 700; display: inline-block; letter-spacing: 0.02em;
+}
+.ts-p-purple { background: var(--purple3); color: var(--purple); }
+.ts-p-green  { background: #D1FAE5; color: #065F46; }
+.ts-p-amber  { background: #FEF3C7; color: #92400E; }
+.ts-p-gray   { background: #F3F4F6; color: #4B5563; }
+.ts-p-red    { background: #FEE2E2; color: #991B1B; }
+.ts-p-dark   { background: rgba(26,20,51,0.08); color: var(--dark); }
+
+/* ─── Tables ─── */
+.ts-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ts-tbl th {
+  text-align: left; font-size: 11px; font-weight: 700; color: var(--muted);
+  padding: 0 10px 10px; border-bottom: 1.5px solid var(--border);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.ts-tbl td { padding: 11px 10px; border-bottom: 1px solid #F0EEF8; color: var(--dark); vertical-align: middle; }
+.ts-tbl tr:last-child td { border-bottom: none; }
+.ts-tbl tr:hover td { background: #FAFAFE; }
+.ts-rn { font-size: 13px; font-weight: 600; color: var(--dark); }
+.ts-rm { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+/* ─── Forms ─── */
+.ts-frow { margin-bottom: 14px; }
+.ts-fl { font-size: 12px; font-weight: 600; color: var(--dark); margin-bottom: 5px; display: block; }
+.ts-fl span { font-weight: 400; color: var(--muted); margin-left: 4px; }
+.ts-hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.ts-input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+input[type=text], input[type=number], input[type=email], select, textarea {
+  width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 9px 13px; font-size: 13px; font-family: 'Inter', sans-serif;
+  color: var(--dark); background: white; outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--purple); }
+input[type=range] { width: 100%; accent-color: var(--purple); }
+.ts-seg { display: flex; gap: 6px; }
+.ts-seg-btn {
+  flex: 1; padding: 8px; border: 1.5px solid var(--border); border-radius: 9px;
+  font-size: 12px; font-weight: 500; cursor: pointer; text-align: center;
+  color: var(--muted); background: white; font-family: 'Inter', sans-serif; transition: all 0.12s;
+}
+.ts-seg-btn.sel { border-color: var(--purple); background: var(--purple3); color: var(--purple); font-weight: 700; }
+
+/* ─── Dark Panel ─── */
+.ts-dark-panel { background: var(--dark); border-radius: 14px; padding: 22px; color: white; }
+.ts-dark-panel .ts-big-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 42px; font-weight: 700; color: white; letter-spacing: -1px; line-height: 1;
+}
+.ts-big-label { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.ts-dr { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.ts-dr:last-child { border-bottom: none; }
+.ts-dr-key { font-size: 12px; color: rgba(255,255,255,0.5); }
+.ts-dr-val { font-size: 13px; font-weight: 600; color: white; }
+
+/* ─── Step Flow ─── */
+.ts-steps { display: flex; align-items: center; margin-bottom: 26px; }
+.ts-step { display: flex; align-items: center; gap: 8px; }
+.ts-step-n {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+.ts-step.done .ts-step-n { background: var(--green); color: white; }
+.ts-step.cur  .ts-step-n { background: var(--purple); color: white; }
+.ts-step.todo .ts-step-n { background: #E8E6F8; color: var(--muted); }
+.ts-step-lbl { font-size: 12px; font-weight: 600; }
+.ts-step.done .ts-step-lbl { color: var(--green); }
+.ts-step.cur  .ts-step-lbl { color: var(--dark); }
+.ts-step.todo .ts-step-lbl { color: #9CA3AF; }
+.ts-step-line { flex: 1; height: 1.5px; background: #E8E6F8; margin: 0 10px; min-width: 24px; }
+
+/* ─── Profile Tabs ─── */
+.ts-ptabs { display: flex; border-bottom: 1.5px solid var(--border); margin-bottom: 20px; }
+.ts-ptab {
+  padding: 10px 16px; font-size: 13px; font-weight: 500; cursor: pointer;
+  color: var(--muted); border-bottom: 2.5px solid transparent; transition: all 0.12s;
+  margin-bottom: -1.5px;
+}
+.ts-ptab:hover { color: var(--dark); }
+.ts-ptab.act { color: var(--purple); border-bottom-color: var(--purple); font-weight: 700; }
+
+/* ─── Activity Feed ─── */
+.ts-af { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid #F0EEF8; }
+.ts-af:last-child { border-bottom: none; }
+.ts-af-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+
+/* ─── Scenario Tabs ─── */
+.ts-stabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.ts-stab {
+  padding: 7px 14px; border-radius: 9px; font-size: 12px; font-weight: 600;
+  cursor: pointer; border: 1.5px solid var(--border); color: var(--muted); background: white;
+  transition: all 0.12s;
+}
+.ts-stab.act { background: var(--purple); color: white; border-color: var(--purple); }
+
+/* ─── Upload Zone ─── */
+.ts-upload-zone {
+  border: 2px dashed var(--border); border-radius: 12px; padding: 28px;
+  text-align: center; cursor: pointer; transition: all 0.15s;
+}
+.ts-upload-zone:hover { border-color: var(--purple); background: var(--purple3); }
+
+/* ─── Toggle ─── */
+.ts-toggle {
+  width: 42px; height: 24px; border-radius: 20px; background: var(--purple);
+  display: flex; align-items: center; padding: 2px; cursor: pointer; flex-shrink: 0;
+}
+.ts-toggle-off { background: #E2E0F0; }
+.ts-toggle-knob { width: 20px; height: 20px; border-radius: 50%; background: white; }
+.ts-toggle-off .ts-toggle-knob { margin-left: 0; }
+.ts-toggle:not(.ts-toggle-off) .ts-toggle-knob { margin-left: auto; }
+
+/* ─── Avatars ─── */
+.ts-av-sm {
+  width: 28px; height: 28px; border-radius: 50%; background: var(--dark);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 800; color: white; flex-shrink: 0;
+}
+.ts-av-lg {
+  width: 58px; height: 58px; border-radius: 50%; background: var(--purple);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 800; color: white; flex-shrink: 0;
+  font-family: 'Playfair Display', serif;
+}
+
+/* ─── Back link ─── */
+.ts-back {
+  background: none; border: none; color: var(--purple); font-size: 13px;
+  font-weight: 600; cursor: pointer; padding: 0; margin-bottom: 14px;
+  font-family: 'Inter', sans-serif; display: inline-block; text-decoration: none;
+}
+
+/* ─── Row items ─── */
+.ts-row-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 0; border-bottom: 1px solid #F0EEF8; cursor: pointer;
+}
+.ts-row-item:last-child { border-bottom: none; }
+.ts-rv { font-size: 13px; font-weight: 700; color: var(--dark); text-align: right; }
+.ts-rs { font-size: 11px; color: var(--muted); text-align: right; }
