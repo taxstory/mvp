@@ -1,66 +1,205 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 
-const CLIENTS = [
-  {name:'Jennifer Marsh',    email:'jmarsh@example.com',  scenarios:3, horizon:'10 yr', saved:'$28,400', status:'Active'},
-  {name:'David & Sue Kim',   email:'dkim@example.com',    scenarios:2, horizon:'7 yr',  saved:'$14,200', status:'Active'},
-  {name:'Marcus Washington', email:'mwash@example.com',   scenarios:1, horizon:'15 yr', saved:'$41,800', status:'Active'},
-  {name:'Carol Reyes',       email:'creyes@example.com',  scenarios:2, horizon:'5 yr',  saved:'$9,600',  status:'Active'},
-];
+const BRACKETS_MFJ    = [[23850,.10],[96950,.12],[206700,.22],[394600,.24],[501050,.32],[751600,.35],[Infinity,.37]];
+const BRACKETS_SINGLE = [[11925,.10],[48475,.12],[103350,.22],[197300,.24],[250525,.32],[626350,.35],[Infinity,.37]];
+const STD_DED_MFJ = 30000, STD_DED_SINGLE = 15000;
+
+function calcTax(taxable, mfj) {
+  const brackets = mfj ? BRACKETS_MFJ : BRACKETS_SINGLE;
+  let tax = 0, prev = 0;
+  for (const [lim, rate] of brackets) {
+    if (taxable <= prev) break;
+    tax += (Math.min(taxable, lim) - prev) * rate;
+    prev = lim;
+  }
+  return tax;
+}
+
+function projectYears(form, years) {
+  const mfj = form.filingStatus.includes('jointly');
+  const std = mfj ? STD_DED_MFJ : STD_DED_SINGLE;
+  const g = +form.growthRate / 100;
+  const results = [];
+  let tradBal  = +form.ira;
+  let rothBal  = +form.roth;
+  let k401Bal  = +form.k401;
+  let taxBal   = +form.taxable;
+  let income   = +form.wages;
+
+  for (let i = 0; i < years; i++) {
+    const age = +form.age + i;
+    // Roth conversion scenario: convert to fill 22% bracket each year
+    const baseIncome = income;
+    const taxable_no_convert = Math.max(0, baseIncome - std);
+    const baseTax = calcTax(taxable_no_convert, mfj);
+
+    // Baseline scenario
+    const rmdAge = 73;
+    const rmd = age >= rmdAge && tradBal > 0 ? tradBal / (90 - age) : 0;
+    const totalIncome = baseIncome + rmd;
+    const taxableInc = Math.max(0, totalIncome - std);
+    const fedTax = calcTax(taxableInc, mfj);
+
+    results.push({
+      year: new Date().getFullYear() + i,
+      age,
+      income: Math.round(totalIncome),
+      tradBal: Math.round(tradBal),
+      rothBal: Math.round(rothBal),
+      k401Bal: Math.round(k401Bal),
+      taxBal:  Math.round(taxBal),
+      total:   Math.round(tradBal + rothBal + k401Bal + taxBal),
+      fedTax:  Math.round(fedTax),
+      rmd:     Math.round(rmd),
+    });
+
+    // Grow balances
+    tradBal = (tradBal + (+form.annualContrib * 0.7)) * (1 + g) - rmd;
+    rothBal = (rothBal + (+form.annualContrib * 0.3)) * (1 + g);
+    k401Bal = k401Bal * (1 + g);
+    taxBal  = taxBal  * (1 + g);
+    income  = income  * 1.03; // 3% wage growth
+  }
+  return results;
+}
+
+const EMPTY_FORM = {
+  name:'', age:55, retireAge:65, filingStatus:'Married filing jointly',
+  wages:150000, ira:300000, roth:50000, k401:200000, taxable:100000,
+  annualContrib:20000, growthRate:7,
+};
 
 export default function RIAProjections() {
-  const [view, setView]         = useState('list');
-  const [selected, setSelected] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const { user } = useAuth();
+  const [view, setView]           = useState('list');
+  const [projections, setProj]    = useState([]);
+  const [selected, setSelected]   = useState(null);
+  const [form, setForm]           = useState(EMPTY_FORM);
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState('');
+  const [loading, setLoading]     = useState(true);
   const [activeScenario, setActiveScenario] = useState('baseline');
-  const [form, setForm] = useState({
-    name:'', age:58, retireAge:65, filingStatus:'Married filing jointly',
-    wages:180000, ira:420000, roth:85000, taxable:310000, k401:185000,
-    annualContrib:23000, growthRate:7,
-  });
-  const upd = k => e => setForm(f=>({...f,[k]:e.target.value}));
 
+  const upd = k => e => setForm(f => ({...f, [k]: e.target.value}));
+  const yearsTo = Math.max(1, +form.retireAge - +form.age);
+  const projection = projectYears(form, Math.min(yearsTo + 15, 30));
+  const atRetirement = projection[yearsTo - 1] || projection[projection.length - 1];
+  const totalAssets = (+form.ira||0)+(+form.roth||0)+(+form.k401||0)+(+form.taxable||0);
+  const lifetimeTax = projection.reduce((s, r) => s + r.fedTax, 0);
+
+  useEffect(() => { if (user) fetchProj(); }, [user]);
+
+  async function fetchProj() {
+    setLoading(true);
+    const { data } = await supabase
+      .from('ria_projections')
+      .select('*, clients(name)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    setProj(data || []);
+    setLoading(false);
+  }
+
+  async function handleSave() {
+    if (!form.name.trim()) { setError('Client name is required.'); return; }
+    setSaving(true); setError('');
+    try {
+      const payload = {
+        user_id: user.id,
+        client_name: form.name,
+        filing_status: form.filingStatus,
+        current_age: +form.age,
+        retirement_age: +form.retireAge,
+        annual_income: +form.wages,
+        ira_balance: +form.ira,
+        roth_balance: +form.roth,
+        k401_balance: +form.k401,
+        taxable_balance: +form.taxable,
+        annual_contribution: +form.annualContrib,
+        growth_rate: +form.growthRate,
+        projection_data: projection,
+        lifetime_tax_estimate: lifetimeTax,
+        notes: '',
+      };
+      const { data, error: e } = await supabase.from('ria_projections').insert(payload).select('id').single();
+      if (e) throw e;
+      await fetchProj();
+      setSelected({ ...payload, id: data.id });
+      setView('detail');
+    } catch(e) { setError(e.message); } finally { setSaving(false); }
+  }
+
+  async function handleDelete(id) {
+    if (!window.confirm('Delete this projection?')) return;
+    await supabase.from('ria_projections').delete().eq('id', id);
+    await fetchProj();
+    if (selected?.id === id) setView('list');
+  }
+
+  const fmt = v => v != null ? `$${Math.round(v).toLocaleString()}` : '—';
+  const sp = selected?.projection_data || [];
+  const sAtRetire = sp[Math.max(0, (selected?.retirement_age||65) - (selected?.current_age||55) - 1)] || sp[sp.length-1] || {};
+
+  // ── LIST ──
   if (view === 'list') return (
     <div className="ts-page">
       <div className="ts-hrow">
         <div><div className="ts-page-title">RIA Projections</div><div className="ts-page-sub">Multi-year tax planning for investment advisors</div></div>
-        <button className="ts-btn ts-btn-primary" onClick={()=>setView('new')}>+ New projection</button>
+        <button className="ts-btn ts-btn-primary" onClick={()=>{setForm(EMPTY_FORM);setError('');setView('new');}}>+ New projection</button>
       </div>
       <div className="ts-g4">
-        {[{l:'RIA clients',v:'8'},{l:'Avg tax saved',v:'$23.5k',d:'per client',dc:'ts-delta-up'},{l:'Scenarios modeled',v:'18'},{l:'Avg horizon',v:'9.2 yr'}].map(k=>(
-          <div className="ts-kpi" key={k.l}><div className="ts-kpi-label">{k.l}</div><div className="ts-kpi-val">{k.v}</div>{k.d&&<div className={`ts-kpi-delta ${k.dc}`}>{k.d}</div>}</div>
+        {[
+          { l:'RIA clients',     v: loading ? '—' : projections.length },
+          { l:'Avg lifetime tax',v: loading ? '—' : projections.length ? fmt(projections.reduce((s,p)=>s+(p.lifetime_tax_estimate||0),0)/projections.length) : '—' },
+          { l:'Scenarios run',   v: loading ? '—' : projections.length },
+          { l:'Avg horizon',     v: loading ? '—' : projections.length ? `${Math.round(projections.reduce((s,p)=>s+((p.retirement_age||65)-(p.current_age||55)),0)/projections.length)} yr` : '—' },
+        ].map(k=>(
+          <div className="ts-kpi" key={k.l}><div className="ts-kpi-label">{k.l}</div><div className="ts-kpi-val">{k.v}</div></div>
         ))}
       </div>
       <div className="ts-card">
-        <table className="ts-tbl">
-          <thead><tr><th>Client</th><th>Scenarios</th><th>Horizon</th><th>Est. tax saved</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody>
-            {CLIENTS.map((c,i)=>(
-              <tr key={i}>
-                <td><div className="ts-rn">{c.name}</div><div className="ts-rm">{c.email}</div></td>
-                <td>{c.scenarios} scenarios</td>
-                <td>{c.horizon}</td>
-                <td style={{fontWeight:700,color:'var(--green)'}}>{c.saved}</td>
-                <td><span className="ts-pill ts-p-green">{c.status}</span></td>
-                <td><button className="ts-btn ts-btn-ghost ts-btn-sm" onClick={()=>{setSelected(c);setView('detail');}}>View →</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {loading ? <div style={{padding:'40px',textAlign:'center',color:'var(--muted)'}}>Loading…</div>
+        : projections.length === 0 ? (
+          <div style={{textAlign:'center',padding:'40px'}}>
+            <div style={{fontSize:'32px',marginBottom:'10px'}}>📈</div>
+            <div style={{fontSize:'14px',color:'var(--muted)',marginBottom:'16px'}}>No RIA projections yet.</div>
+            <button className="ts-btn ts-btn-primary" onClick={()=>setView('new')}>+ Build first projection</button>
+          </div>
+        ) : (
+          <table className="ts-tbl">
+            <thead><tr><th>Client</th><th>Age / horizon</th><th>Portfolio today</th><th>Lifetime tax</th><th>Actions</th></tr></thead>
+            <tbody>
+              {projections.map(p=>(
+                <tr key={p.id}>
+                  <td><div className="ts-rn">{p.clients?.name || p.client_name || '—'}</div><div className="ts-rm">{p.filing_status}</div></td>
+                  <td>Age {p.current_age} → {p.retirement_age}</td>
+                  <td style={{fontWeight:700}}>{fmt((p.ira_balance||0)+(p.roth_balance||0)+(p.k401_balance||0)+(p.taxable_balance||0))}</td>
+                  <td style={{color:'var(--muted)'}}>{fmt(p.lifetime_tax_estimate)}</td>
+                  <td style={{display:'flex',gap:'6px'}}>
+                    <button className="ts-btn ts-btn-ghost ts-btn-sm" onClick={()=>{setSelected(p);setView('detail');}}>View →</button>
+                    <button className="ts-btn ts-btn-danger ts-btn-sm" onClick={()=>handleDelete(p.id)}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
 
+  // ── NEW ──
   if (view === 'new') return (
     <div className="ts-page">
-      <button className="ts-back" onClick={()=>setView('list')}>← Back to projections</button>
-      <div className="ts-hrow"><div><div className="ts-page-title">New RIA Projection</div><div className="ts-page-sub">Build a multi-year tax scenario model</div></div></div>
+      <button className="ts-back" onClick={()=>setView('list')}>← Back</button>
+      <div className="ts-hrow"><div><div className="ts-page-title">New RIA Projection</div><div className="ts-page-sub">Build a multi-year tax scenario</div></div></div>
       <div className="ts-split">
         <div style={{display:'flex',flexDirection:'column',gap:'14px'}}>
           <div className="ts-card">
             <div className="ts-card-title">Client profile</div>
-            <div className="ts-frow"><label className="ts-fl">Client name</label><input type="text" placeholder="e.g. Jennifer Marsh" value={form.name} onChange={upd('name')} /></div>
+            <div className="ts-frow"><label className="ts-fl">Client name <span>*</span></label><input type="text" placeholder="e.g. Jennifer Marsh" value={form.name} onChange={upd('name')} /></div>
             <div className="ts-input-row">
               <div className="ts-frow"><label className="ts-fl">Current age</label><input type="number" value={form.age} onChange={upd('age')} /></div>
               <div className="ts-frow"><label className="ts-fl">Retirement age</label><input type="number" value={form.retireAge} onChange={upd('retireAge')} /></div>
@@ -70,127 +209,156 @@ export default function RIAProjections() {
                 <option>Single</option><option>Married filing jointly</option><option>Married filing separately</option><option>Head of household</option>
               </select>
             </div>
+            <div className="ts-frow"><label className="ts-fl">Annual income</label><input type="number" value={form.wages} onChange={upd('wages')} /></div>
+            <div className="ts-frow"><label className="ts-fl">Annual contribution</label><input type="number" value={form.annualContrib} onChange={upd('annualContrib')} /></div>
           </div>
           <div className="ts-card">
-            <div className="ts-card-title">Current portfolio</div>
-            <div className="ts-input-row">
-              <div className="ts-frow"><label className="ts-fl">Annual income</label><input type="number" value={form.wages} onChange={upd('wages')} /></div>
-              <div className="ts-frow"><label className="ts-fl">Annual contribution</label><input type="number" value={form.annualContrib} onChange={upd('annualContrib')} /></div>
-            </div>
+            <div className="ts-card-title">Portfolio balances</div>
             <div className="ts-input-row">
               <div className="ts-frow"><label className="ts-fl">Traditional IRA</label><input type="number" value={form.ira} onChange={upd('ira')} /></div>
               <div className="ts-frow"><label className="ts-fl">Roth IRA</label><input type="number" value={form.roth} onChange={upd('roth')} /></div>
             </div>
             <div className="ts-input-row">
-              <div className="ts-frow"><label className="ts-fl">401(k) balance</label><input type="number" value={form.k401} onChange={upd('k401')} /></div>
+              <div className="ts-frow"><label className="ts-fl">401(k)</label><input type="number" value={form.k401} onChange={upd('k401')} /></div>
               <div className="ts-frow"><label className="ts-fl">Taxable accounts</label><input type="number" value={form.taxable} onChange={upd('taxable')} /></div>
             </div>
             <div className="ts-frow">
-              <label className="ts-fl">Growth rate assumption: {form.growthRate}%</label>
+              <label className="ts-fl">Growth rate: {form.growthRate}%</label>
               <input type="range" min="3" max="12" step="0.5" value={form.growthRate} onChange={upd('growthRate')} />
             </div>
           </div>
+          {error && <div style={{background:'#FEE2E2',color:'#991B1B',padding:'10px 14px',borderRadius:'10px',fontSize:'13px'}}>{error}</div>}
           <div style={{display:'flex',gap:'10px'}}>
             <button className="ts-btn ts-btn-secondary" style={{flex:1}} onClick={()=>setView('list')}>Cancel</button>
-            <button className="ts-btn ts-btn-primary" style={{flex:2}} onClick={()=>setView('detail')}>Build projection →</button>
+            <button className="ts-btn ts-btn-primary" style={{flex:2}} onClick={handleSave} disabled={saving}>{saving?'Saving…':'Build projection →'}</button>
           </div>
         </div>
 
         <div style={{display:'flex',flexDirection:'column',gap:'14px'}}>
           <div className="ts-dark-panel">
-            <div style={{fontSize:'10px',color:'rgba(255,255,255,.4)',textTransform:'uppercase',letterSpacing:'.08em',fontWeight:700,marginBottom:'14px'}}>Projection snapshot</div>
-            <div className="ts-big-num">$1.24M</div>
+            <div style={{fontSize:'10px',color:'rgba(255,255,255,.4)',textTransform:'uppercase',letterSpacing:'.08em',fontWeight:700,marginBottom:'14px'}}>Live projection snapshot</div>
+            <div className="ts-big-num">{fmt(atRetirement?.total)}</div>
             <div className="ts-big-label">projected portfolio at retirement</div>
             <div style={{marginTop:'18px'}}>
-              {[['Years to retirement',`${form.retireAge-form.age} yrs`],['Current total assets',`$${((+form.ira||0)+(+form.roth||0)+(+form.k401||0)+(+form.taxable||0)).toLocaleString()}`],['RMD starts','Age 73'],['Est. annual RMD','$52,400'],['Lifetime tax estimate','$318,000'],].map(([k,v])=>(
+              {[
+                ['Years to retirement', `${yearsTo} yrs`],
+                ['Current total assets', fmt(totalAssets)],
+                ['Est. lifetime tax', fmt(lifetimeTax)],
+                ['RMD starts', 'Age 73'],
+                ['Est. annual RMD', atRetirement ? fmt(atRetirement.rmd) : '—'],
+              ].map(([k,v])=>(
                 <div className="ts-dr" key={k}><div className="ts-dr-key">{k}</div><div className="ts-dr-val">{v}</div></div>
               ))}
             </div>
           </div>
+          {/* Mini bar chart preview */}
           <div className="ts-card">
-            <div className="ts-card-title">Scenarios to model</div>
-            {[{label:'Baseline',sub:'Current trajectory — no changes',active:true},{label:'Roth conversion',sub:'Annual conversions to fill 22% bracket'},{label:'Tax-loss harvesting',sub:'Offset gains with harvested losses'}].map((s,i)=>(
-              <div key={i} style={{display:'flex',gap:'10px',padding:'9px 0',borderBottom:i<2?'1px solid #F0EEF8':'none'}}>
-                <input type="checkbox" defaultChecked={s.active} style={{accentColor:'var(--purple)',marginTop:'2px'}} />
-                <div><div style={{fontSize:'13px',fontWeight:600,color:'var(--dark)'}}>{s.label}</div><div style={{fontSize:'11px',color:'var(--muted)',marginTop:'1px'}}>{s.sub}</div></div>
-              </div>
-            ))}
+            <div className="ts-card-title">Annual tax preview</div>
+            <div style={{display:'flex',alignItems:'flex-end',gap:'4px',height:'80px'}}>
+              {projection.slice(0,15).map(y=>{
+                const maxTax = Math.max(...projection.map(p=>p.fedTax));
+                const h = maxTax > 0 ? Math.round((y.fedTax/maxTax)*70) : 4;
+                return (
+                  <div key={y.year} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:'2px'}}>
+                    <div style={{width:'100%',height:`${h}px`,borderRadius:'2px 2px 0 0',background:'var(--purple)',opacity:.7}} />
+                    <div style={{fontSize:'8px',color:'var(--muted)'}}>{String(y.year).slice(2)}</div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 
-  // Detail
-  const c = selected || CLIENTS[0];
+  // ── DETAIL ──
+  const s = selected || {};
   return (
     <div className="ts-page">
-      <button className="ts-back" onClick={()=>setView('list')}>← Back to projections</button>
+      <button className="ts-back" onClick={()=>setView('list')}>← Back</button>
       <div className="ts-hrow">
         <div style={{display:'flex',alignItems:'center',gap:'14px'}}>
-          <div className="ts-av-lg">{c.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+          <div className="ts-av-lg">{(s.clients?.name||s.client_name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
           <div>
-            <div className="ts-page-title">{c.name}</div>
-            <div className="ts-page-sub">{c.horizon} projection · {c.scenarios} scenarios · <span className="ts-pill ts-p-green">Est. saved {c.saved}</span></div>
+            <div className="ts-page-title">{s.clients?.name || s.client_name || 'RIA Client'}</div>
+            <div className="ts-page-sub">Age {s.current_age} → {s.retirement_age} · {s.filing_status} · {yearsTo} yr horizon</div>
           </div>
         </div>
         <div style={{display:'flex',gap:'8px'}}>
-          <button className="ts-btn ts-btn-secondary">Export PDF</button>
-          <button className="ts-btn ts-btn-primary">+ Add scenario</button>
+          <button className="ts-btn ts-btn-danger ts-btn-sm" onClick={()=>handleDelete(s.id)}>Delete</button>
         </div>
-      </div>
-
-      <div className="ts-stabs">
-        {['Baseline','Roth Conversion','Tax-Loss Harvesting'].map(s=>(
-          <div key={s} className={`ts-stab${activeScenario===s.toLowerCase().replace(/ /g,'-')?' act':''}`} onClick={()=>setActiveScenario(s.toLowerCase().replace(/ /g,'-'))}>{s}</div>
-        ))}
       </div>
 
       <div className="ts-g4" style={{marginBottom:'16px'}}>
-        {[{l:'Total portfolio',v:'$1.24M'},{l:'Est. tax saved',v:c.saved,cl:'ts-delta-up'},{l:'Lifetime tax',v:'$318k'},{l:'RMD at 73',v:'$52,400/yr'}].map(k=>(
-          <div className="ts-kpi" key={k.l}><div className="ts-kpi-label">{k.l}</div><div className="ts-kpi-val" style={{fontSize:'20px'}}>{k.v}</div>{k.cl&&<div className={`ts-kpi-delta ${k.cl}`}>vs baseline</div>}</div>
+        {[
+          {l:'Total at retirement',v: fmt(sAtRetire.total)},
+          {l:'Lifetime fed. tax',  v: fmt(s.lifetime_tax_estimate)},
+          {l:'Annual RMD at 73',   v: fmt(sAtRetire.rmd)},
+          {l:'Growth rate',        v: `${s.growth_rate}%`},
+        ].map(k=>(
+          <div className="ts-kpi" key={k.l}><div className="ts-kpi-label">{k.l}</div><div className="ts-kpi-val" style={{fontSize:'20px'}}>{k.v}</div></div>
         ))}
       </div>
 
-      {/* Bar chart */}
+      {/* Year-by-year table */}
       <div className="ts-card" style={{marginBottom:'14px'}}>
-        <div className="ts-card-title">10-year projection — annual federal tax <span className="ts-card-sub">Baseline vs Roth Conversion</span></div>
-        <div style={{display:'flex',gap:'12px',marginBottom:'10px'}}>
-          {[['var(--purple)','Baseline'],['var(--teal)','Roth Conversion']].map(([bg,lbl])=>(
-            <div key={lbl} style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'11px',color:'var(--muted)',fontWeight:600}}>
-              <div style={{width:'9px',height:'9px',borderRadius:'2px',background:bg}} />{lbl}
-            </div>
-          ))}
-        </div>
-        <div style={{display:'flex',alignItems:'flex-end',gap:'10px',height:'100px'}}>
-          {[['2026',60,48],['2027',62,46],['2028',68,44],['2029',72,42],['2030',76,40],['2031',80,38],['2032',85,37],['2033',88,36],['2034',92,34],['2035',95,32]].map(([yr,b,r])=>(
-            <div key={yr} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:'2px'}}>
-              <div style={{display:'flex',gap:'2px',alignItems:'flex-end',width:'100%',height:'80px'}}>
-                <div style={{flex:1,height:`${b}px`,borderRadius:'3px 3px 0 0',background:'var(--purple)',opacity:.7}} />
-                <div style={{flex:1,height:`${r}px`,borderRadius:'3px 3px 0 0',background:'var(--teal)',opacity:.8}} />
-              </div>
-              <div style={{fontSize:'9px',color:'var(--muted)'}}>{yr}</div>
-            </div>
-          ))}
+        <div className="ts-card-title">Year-by-year projection</div>
+        <div style={{overflowX:'auto'}}>
+          <table className="ts-tbl">
+            <thead><tr><th>Year</th><th>Age</th><th>Income</th><th>Fed. Tax</th><th>Portfolio</th><th>RMD</th></tr></thead>
+            <tbody>
+              {sp.map((y,i)=>(
+                <tr key={i} style={{background:y.age===(s.retirement_age||65)?'#EEEAFF':''}}>
+                  <td style={{fontWeight:y.age===(s.retirement_age||65)?700:400}}>{y.year}</td>
+                  <td>{y.age}{y.age===s.retirement_age?' 🎯':''}</td>
+                  <td>{fmt(y.income)}</td>
+                  <td>{fmt(y.fedTax)}</td>
+                  <td style={{fontWeight:600}}>{fmt(y.total)}</td>
+                  <td>{y.rmd > 0 ? fmt(y.rmd) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
       <div className="ts-g2">
         <div className="ts-card">
-          <div className="ts-card-title">Account balances at retirement</div>
-          {[['Traditional IRA','$0','$682k converted'],['Roth IRA','$1.12M','↑ from $85k'],['401(k)','$310k','RMDs begin age 73'],['Taxable','$340k','Step-up at death']].map(([ac,v,sub],i)=>(
-            <div key={ac} style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',padding:'10px 0',borderBottom:i<3?'1px solid #F0EEF8':'none'}}>
-              <div><div style={{fontSize:'13px',fontWeight:600,color:'var(--dark)'}}>{ac}</div><div style={{fontSize:'11px',color:'var(--muted)',marginTop:'2px'}}>{sub}</div></div>
-              <div style={{fontSize:'14px',fontWeight:700,color:'var(--dark)'}}>{v}</div>
+          <div className="ts-card-title">Starting portfolio</div>
+          {[
+            ['Traditional IRA', fmt(s.ira_balance)],
+            ['Roth IRA',        fmt(s.roth_balance)],
+            ['401(k)',          fmt(s.k401_balance)],
+            ['Taxable',         fmt(s.taxable_balance)],
+            ['Total',           fmt((s.ira_balance||0)+(s.roth_balance||0)+(s.k401_balance||0)+(s.taxable_balance||0))],
+          ].map(([k,v],i,arr)=>(
+            <div key={k} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:i<arr.length-1?'1px solid #F0EEF8':'none',fontWeight:i===arr.length-1?700:400,fontSize:'13px'}}>
+              <span style={{color:i===arr.length-1?'var(--dark)':'var(--muted)'}}>{k}</span>
+              <span style={{color:'var(--dark)'}}>{v}</span>
             </div>
           ))}
         </div>
         <div className="ts-card">
           <div className="ts-card-title">Planning notes</div>
-          <textarea style={{height:'120px',resize:'none'}} defaultValue="Roth conversion strategy: fill 22% bracket each year before retirement. Target $60-70k annual conversions 2026-2032. Coordinate with Social Security timing." />
-          <button className="ts-btn ts-btn-secondary ts-btn-sm" style={{marginTop:'10px'}}>Save notes</button>
+          <RIANoteEditor projId={s.id} initialNotes={s.notes||''} />
         </div>
       </div>
     </div>
+  );
+}
+
+function RIANoteEditor({ projId, initialNotes }) {
+  const [notes, setNotes] = useState(initialNotes);
+  const [saved, setSaved]   = useState(false);
+  async function save() {
+    await supabase.from('ria_projections').update({ notes }).eq('id', projId);
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
+  }
+  return (
+    <>
+      <textarea value={notes} onChange={e=>{setNotes(e.target.value);setSaved(false);}} style={{height:'100px',resize:'none'}} placeholder="Add scenario notes…" />
+      <button className="ts-btn ts-btn-secondary ts-btn-sm" style={{marginTop:'10px'}} onClick={save}>{saved?'Saved ✓':'Save notes'}</button>
+    </>
   );
 }
