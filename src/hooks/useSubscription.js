@@ -1,16 +1,18 @@
-import { useEffect, useState } from 'react';
+// src/hooks/useSubscription.js
+// Reads live subscription + usage data from Supabase.
+// Returns credit and projection counts so all pages stay in sync.
+
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
-/**
- * Tier limits (must match Stripe products and server-side enforcement)
- * Projection limits are per-year; credit limits are annual video credits.
- */
-const TIER_LIMITS = {
+// Credit and projection limits per plan tier
+const PLAN_LIMITS = {
   cpa_basic:  { projections: 100,  credits: 0   },
-  cpa_pro:    { projections: 300,  credits: 100  },
+  cpa_pro:    { projections: 300,  credits: 100 },
   ria_basic:  { projections: 50,   credits: 0   },
   ria_pro:    { projections: 150,  credits: 25  },
+  trial:      { projections: 10,   credits: 3   },
 };
 
 export function useSubscription() {
@@ -21,56 +23,56 @@ export function useSubscription() {
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
-    fetchSubscription();
-    fetchUsage();
-  }, [user]);
+    fetchAll();
 
-  async function fetchSubscription() {
-    const { data } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-    setSubscription(data);
-  }
+    // Subscribe to realtime changes on usage_counters
+    const channel = supabase.channel('usage')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'usage_counters',
+        filter: `user_id=eq.${user.id}`,
+      }, payload => {
+        setUsage(payload.new);
+      })
+      .subscribe();
 
-  async function fetchUsage() {
-    const { data } = await supabase
-      .from('usage_counters')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-    setUsage(data);
+    return () => supabase.removeChannel(channel);
+  }, [user?.id]);
+
+  async function fetchAll() {
+    setLoading(true);
+    const [{ data: sub }, { data: usageData }] = await Promise.all([
+      supabase.from('subscriptions').select('*').eq('user_id', user.id).maybeSingle(),
+      supabase.from('usage_counters').select('*').eq('user_id', user.id).maybeSingle(),
+    ]);
+    setSubscription(sub);
+    setUsage(usageData);
     setLoading(false);
   }
 
-  const tier        = subscription?.tier ?? null;
-  const limits      = tier ? TIER_LIMITS[tier] : null;
-  const isTrialing  = subscription?.status === 'trialing';
-  const isActive    = ['active', 'trialing'].includes(subscription?.status);
+  // Derive tier
+  const isActive    = subscription?.status === 'active';
+  const isTrialing  = subscription?.status === 'trialing' || (!subscription && !!user);
+  const tier        = isActive ? (subscription?.tier || 'cpa_pro') : isTrialing ? 'trial' : null;
+  const limits      = PLAN_LIMITS[tier] || PLAN_LIMITS.trial;
 
-  const canProject  = isActive && limits && (usage?.projections_used ?? 0) < limits.projections;
-  const canGenVideo = isActive && limits && (usage?.credits_used ?? 0) < limits.credits;
-
-  const projectionsRemaining = limits
-    ? Math.max(0, limits.projections - (usage?.projections_used ?? 0))
-    : 0;
-  const creditsRemaining = limits
-    ? Math.max(0, limits.credits - (usage?.credits_used ?? 0))
-    : 0;
+  const projectionsUsed    = usage?.projections_used    || 0;
+  const creditsUsed        = usage?.credits_used        || 0;
+  const projectionsRemaining = Math.max(0, limits.projections - projectionsUsed);
+  const creditsRemaining     = Math.max(0, limits.credits     - creditsUsed);
+  const creditsTotal         = limits.credits;
 
   return {
     subscription,
-    usage,
     loading,
     tier,
-    limits,
     isActive,
     isTrialing,
-    canProject,
-    canGenVideo,
+    projectionsUsed,
     projectionsRemaining,
+    creditsUsed,
     creditsRemaining,
-    refresh: () => { fetchSubscription(); fetchUsage(); },
+    creditsTotal,
+    limits,
+    refetch: fetchAll,
   };
 }
