@@ -3,8 +3,18 @@
   publish = "dist"
   functions = "netlify/functions"
 
+# Install function dependencies before bundling
+[build.environment]
+  NODE_VERSION = "18"
+
 [[plugins]]
   package = "@netlify/plugin-functions-install-core"
+
+# Explicit function config — tells Netlify to bundle with esbuild
+# and install the functions/package.json deps
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["netlify/functions/node_modules/**"]
 
 [[redirects]]
   from = "/*"
