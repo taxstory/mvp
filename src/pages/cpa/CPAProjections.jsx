@@ -141,9 +141,56 @@ export default function CPAProjections() {
     if (selected?.id === id) setView('list');
   }
 
-  const fmt = v => v != null ? `$${Math.round(v).toLocaleString()}` : '—';
+  // NaN-safe formatter — returns '—' for null/undefined/NaN, '$0' for zero
+  const fmt = v => {
+    if (v == null) return '—';
+    const n = Number(v);
+    if (isNaN(n)) return '—';
+    return `$${Math.round(n).toLocaleString()}`;
+  };
+
   const filtered = returns.filter(r => !search || r.file_name?.toLowerCase().includes(search.toLowerCase()) || r.clients?.name?.toLowerCase().includes(search.toLowerCase()));
-  const pd = selected?.parsed_data || {};
+
+  // Normalize parsed_data — the parse-return function uses camelCase keys,
+  // the manual entry form uses snake_case. This maps both to a single canonical set.
+  function normalizeParsed(raw) {
+    if (!raw) return {};
+    return {
+      // Identity — pass through snake_case fields if already present
+      filing_status:    raw.filing_status    ?? raw.filingStatus    ?? null,
+      tax_year:         raw.tax_year         ?? raw.taxYear         ?? null,
+      wages:            raw.wages            ?? raw.wages_salaries  ?? raw.totalWages ?? null,
+      business_income:  raw.business_income  ?? raw.scheduleC_netProfit ?? null,
+      capital_gains:    raw.capital_gains    ?? raw.capitalGainLoss ?? raw.capital_gains_long ?? null,
+      other_income:     raw.other_income     ?? raw.otherIncome     ?? null,
+      total_income:     raw.total_income     ?? raw.totalIncome     ?? null,
+      agi:              raw.agi              ?? raw.agi             ?? raw.adjusted_gross_income ?? null,
+      standard_deduction: raw.standard_deduction ?? raw.standardDeduction ?? null,
+      itemized_deductions: raw.itemized_deductions ?? raw.itemizedDeductions ?? null,
+      taxable_income:   raw.taxable_income   ?? raw.taxableIncome   ?? null,
+      federal_tax:      raw.federal_tax      ?? raw.totalTax        ?? raw.regularTax   ?? raw.total_tax ?? null,
+      effective_rate:   raw.effective_rate   ?? (raw.effectiveRate != null ? +(raw.effectiveRate * 100).toFixed(1) : null),
+      withholding:      raw.withholding      ?? raw.federalWithheld ?? null,
+      estimated_payments: raw.estimated_payments ?? raw.estimatedTaxPayments ?? null,
+      // Normalize refund/owed into a single signed field
+      refund_or_owed: raw.refund_or_owed != null
+        ? raw.refund_or_owed
+        : raw.refund != null && raw.refund > 0
+          ? raw.refund
+          : raw.amountOwed != null && raw.amountOwed > 0
+            ? -raw.amountOwed
+            : raw.amount_owed != null && raw.amount_owed > 0
+              ? -raw.amount_owed
+              : null,
+      // Pass through extras
+      qbi_deduction:  raw.qbi_deduction  ?? raw.qbiDeduction        ?? null,
+      se_tax:         raw.se_tax         ?? raw.selfEmploymentTax    ?? null,
+      amt:            raw.amt            ?? raw.alternativeMinTax    ?? null,
+      dependents:     raw.dependents     ?? raw.number_of_dependents ?? null,
+    };
+  }
+
+  const pd = normalizeParsed(selected?.parsed_data);
 
   // ── LIST ──
   if (view === 'list') return (
@@ -155,7 +202,11 @@ export default function CPAProjections() {
       <div className="ts-g3">
         {[
           { l:'Total returns', v: loading ? '—' : returns.length },
-          { l:'Avg effective rate', v: loading ? '—' : returns.length ? (returns.reduce((s,r)=>s+(r.parsed_data?.effective_rate||0),0)/returns.length).toFixed(1)+'%' : '—' },
+          { l:'Avg effective rate', v: loading ? '—' : returns.length ? (returns.reduce((s,r) => {
+              const pd = r.parsed_data || {};
+              const rate = pd.effective_rate ?? (pd.effectiveRate != null ? pd.effectiveRate * 100 : 0);
+              return s + rate;
+            }, 0) / returns.length).toFixed(1)+'%' : '—' },
           { l:'With video', v: loading ? '—' : returns.filter(r=>r.status==='audio_ready').length },
         ].map(k => (
           <div className="ts-kpi" key={k.l}><div className="ts-kpi-label">{k.l}</div><div className="ts-kpi-val">{k.v}</div></div>
@@ -178,7 +229,7 @@ export default function CPAProjections() {
             <thead><tr><th>Return / client</th><th>Tax year</th><th>Filing status</th><th>Federal tax</th><th>Eff. rate</th><th>Actions</th></tr></thead>
             <tbody>
               {filtered.map(r => {
-                const p = r.parsed_data || {};
+                const p = normalizeParsed(r.parsed_data || {});
                 return (
                   <tr key={r.id}>
                     <td>
@@ -308,7 +359,12 @@ export default function CPAProjections() {
           <div className="ts-av-lg">{(r.clients?.name||r.file_name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
           <div>
             <div className="ts-page-title">{r.clients?.name || r.file_name || 'Tax Return'}</div>
-            <div className="ts-page-sub">Tax year {r.tax_year || pd.tax_year || '—'} · {pd.filing_status || '—'} · <span className="ts-pill ts-p-green">{pd.effective_rate}% eff. rate</span></div>
+            <div className="ts-page-sub">
+              Tax year {r.tax_year || pd.tax_year || '—'} · {pd.filing_status || '—'} ·{' '}
+              {pd.effective_rate != null
+                ? <span className="ts-pill ts-p-green">{pd.effective_rate}% eff. rate</span>
+                : <span className="ts-pill ts-p-gray">Rate unavailable</span>}
+            </div>
           </div>
         </div>
         <div style={{display:'flex',gap:'8px'}}>
@@ -319,10 +375,13 @@ export default function CPAProjections() {
 
       <div className="ts-g4" style={{marginBottom:'16px'}}>
         {[
-          {l:'Total income',   v:fmt(pd.total_income)},
-          {l:'Federal tax',    v:fmt(pd.federal_tax)},
-          {l:'Effective rate', v:pd.effective_rate ? `${pd.effective_rate}%` : '—'},
-          {l:pd.refund_or_owed>=0?'Refund':'Owed', v:fmt(Math.abs(pd.refund_or_owed))},
+          {l:'Total income',   v: fmt(pd.total_income)},
+          {l:'Federal tax',    v: fmt(pd.federal_tax)},
+          {l:'Effective rate', v: pd.effective_rate != null ? `${pd.effective_rate}%` : '—'},
+          {l: pd.refund_or_owed == null ? 'Refund / Owed'
+              : pd.refund_or_owed >= 0  ? 'Refund'
+              : 'Owed',
+           v: pd.refund_or_owed == null ? '—' : fmt(Math.abs(pd.refund_or_owed))},
         ].map(k=>(
           <div className="ts-kpi" key={k.l}><div className="ts-kpi-label">{k.l}</div><div className="ts-kpi-val" style={{fontSize:'20px'}}>{k.v}</div></div>
         ))}
@@ -353,7 +412,9 @@ export default function CPAProjections() {
               ['Filing status', pd.filing_status],
               ['Tax year', r.tax_year || pd.tax_year],
               ['Withholding', fmt(pd.withholding)],
-              ['Refund / Owed', pd.refund_or_owed >= 0 ? `${fmt(pd.refund_or_owed)} refund` : `${fmt(Math.abs(pd.refund_or_owed))} owed`],
+              ['Refund / Owed', pd.refund_or_owed == null ? '—'
+                : pd.refund_or_owed >= 0 ? `${fmt(pd.refund_or_owed)} refund`
+                : `${fmt(Math.abs(pd.refund_or_owed))} owed`],
               ['Parsed on', r.created_at ? new Date(r.created_at).toLocaleDateString() : '—'],
             ].map(([k,v])=>(
               <div key={k} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #F0EEF8',fontSize:'13px'}}>
