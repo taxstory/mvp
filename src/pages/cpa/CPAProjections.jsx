@@ -127,9 +127,12 @@ export default function CPAProjections() {
         body: JSON.stringify({ taxReturnId: rec.id, storagePath: path, userId: user.id }),
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Parse failed'); }
+      const result = await res.json();
       await fetchReturns();
       const { data: updated } = await supabase.from('tax_returns').select('*').eq('id', rec.id).single();
       setSelected(updated);
+      // Show warning if parser returned limited data (blank/scanned PDF)
+      if (result.warning) setError(`⚠️ ${result.warning}`);
       setView('detail');
     } catch(e) { setError(e.message); } finally { setUploading(false); setParsing(false); }
   }
