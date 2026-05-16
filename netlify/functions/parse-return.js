@@ -2,6 +2,9 @@
 const { createClient } = require('@supabase/supabase-js');
 const Anthropic = require('@anthropic-ai/sdk');
 
+// Extend timeout to 26s (max on Netlify Pro) — Claude + PDF processing needs it
+exports.config = { timeout: 26 };
+
 exports.handler = async (event) => {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 
