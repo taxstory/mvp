@@ -114,7 +114,7 @@ export default function CPAProjections() {
     if (!file || !user) return;
     setError(''); setUploading(true);
     try {
-      const { data: rec, error: ie } = await supabase.from('tax_returns').insert({ user_id: user.id, file_name: file.name, status: 'uploading' }).select('id').single();
+      const { data: rec, error: ie } = await supabase.from('tax_returns').insert({ user_id: user.id, file_name: file.name, status: 'parsing' }).select('id').single();
       if (ie) throw ie;
       const path = `${user.id}/${rec.id}/${file.name}`;
       const { error: ue } = await supabase.storage.from('tax-returns').upload(path, file, { contentType: 'application/pdf' });
