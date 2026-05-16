@@ -126,7 +126,17 @@ export default function CPAProjections() {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
         body: JSON.stringify({ taxReturnId: rec.id, storagePath: path, userId: user.id }),
       });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Parse failed'); }
+      if (!res.ok) {
+        let errMsg = 'Parse failed';
+        try {
+          const e = await res.json();
+          errMsg = e.error || e.message || errMsg;
+        } catch {
+          // Server returned non-JSON (e.g. 500 HTML page) — show status
+          errMsg = `Parse failed (server error ${res.status}). Check that SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in Netlify env vars.`;
+        }
+        throw new Error(errMsg);
+      }
       const result = await res.json();
       await fetchReturns();
       const { data: updated } = await supabase.from('tax_returns').select('*').eq('id', rec.id).single();
