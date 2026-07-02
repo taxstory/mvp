@@ -1,82 +1,114 @@
 // netlify/functions/generate-audio.js
-// Converts Claude-generated script to voiceover using OpenAI TTS.
-// Saves MP3 to Supabase Storage.
+// Converts a generated script to a voiceover MP3 via OpenAI TTS,
+// stores it in Supabase Storage, and deducts one video credit.
 
-const OpenAI = require('openai');
 const { createClient } = require('@supabase/supabase-js');
 
-const openai   = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+exports.config = { timeout: 26 };
+
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const OPENAI_KEY   = process.env.OPENAI_API_KEY;
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
+  const h = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: h, body: '' };
+  if (event.httpMethod !== 'POST')   return { statusCode: 405, headers: h, body: JSON.stringify({ error: 'Method not allowed' }) };
+
+  if (!SUPABASE_URL || !SUPABASE_KEY) return { statusCode: 500, headers: h, body: JSON.stringify({ error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars' }) };
+  if (!OPENAI_KEY)                    return { statusCode: 500, headers: h, body: JSON.stringify({ error: 'Missing OPENAI_API_KEY env var' }) };
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const token = (event.headers.authorization || '').replace('Bearer ', '');
+  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+  if (authErr || !user) return { statusCode: 401, headers: h, body: JSON.stringify({ error: 'Unauthorized' }) };
+
+  let taxReturnId, script;
+  try { ({ taxReturnId, script } = JSON.parse(event.body || '{}')); }
+  catch { return { statusCode: 400, headers: h, body: JSON.stringify({ error: 'Invalid JSON body' }) }; }
+  if (!taxReturnId || !script) return { statusCode: 400, headers: h, body: JSON.stringify({ error: 'Missing taxReturnId or script' }) };
 
   try {
-    const { taxReturnId, userId } = JSON.parse(event.body);
+    // Verify ownership
+    const { data: taxReturn, error: fetchErr } = await supabase
+      .from('tax_returns').select('id, user_id').eq('id', taxReturnId).single();
+    if (fetchErr || !taxReturn) return { statusCode: 404, headers: h, body: JSON.stringify({ error: 'Tax return not found' }) };
+    if (taxReturn.user_id !== user.id) return { statusCode: 403, headers: h, body: JSON.stringify({ error: 'Forbidden — not your return' }) };
 
-    const { data: record } = await supabase
-      .from('tax_returns')
-      .select('id, user_id, script_text, status')
-      .eq('id', taxReturnId)
-      .single();
+    // Check credit balance before spending OpenAI cost
+    const { data: usage } = await supabase.from('usage_counters').select('credits_used').eq('user_id', user.id).maybeSingle();
+    const { data: sub }   = await supabase.from('subscriptions').select('tier,status').eq('user_id', user.id).maybeSingle();
 
-    if (!record || record.user_id !== userId) return { statusCode: 403, body: 'Forbidden' };
-    if (record.status !== 'script_ready')      return { statusCode: 400, body: 'Script not ready' };
-    if (!record.script_text)                   return { statusCode: 400, body: 'No script found' };
+    const TIER_CREDITS = { cpa_basic: 0, cpa_pro: 100, ria_basic: 0, ria_pro: 25, trial: 3 };
+    const tier = sub?.status === 'active' ? (sub.tier || 'cpa_pro') : 'trial';
+    const creditsTotal = TIER_CREDITS[tier] ?? 0;
+    const creditsUsed  = usage?.credits_used || 0;
+    const creditsRemaining = Math.max(0, creditsTotal - creditsUsed);
 
-    // Generate TTS audio
-    const mp3Response = await openai.audio.speech.create({
-      model: 'tts-1-hd',
-      voice: 'nova',          // Professional, warm female voice
-      input: record.script_text,
-      speed: 0.95,            // Slightly slower for clarity
+    if (creditsRemaining <= 0) {
+      return { statusCode: 402, headers: h, body: JSON.stringify({ error: 'No video credits remaining. Purchase more credits or upgrade your plan.' }) };
+    }
+
+    // Call OpenAI TTS via raw fetch (consistent with the rest of the pipeline)
+    const ttsRes = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${OPENAI_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'tts-1',
+        voice: 'alloy',
+        input: script,
+      }),
     });
 
-    const audioBuffer = Buffer.from(await mp3Response.arrayBuffer());
-    const audioPath   = `${userId}/${taxReturnId}/voiceover.mp3`;
+    if (!ttsRes.ok) {
+      const errText = await ttsRes.text();
+      return { statusCode: 500, headers: h, body: JSON.stringify({ error: `OpenAI TTS error ${ttsRes.status}: ${errText.slice(0, 300)}` }) };
+    }
 
-    // Upload to Supabase Storage
-    const { error: uploadError } = await supabase.storage
+    const audioBuffer = Buffer.from(await ttsRes.arrayBuffer());
+    const path = `${user.id}/${taxReturnId}/voiceover.mp3`;
+
+    const { error: uploadErr } = await supabase.storage
       .from('audio')
-      .upload(audioPath, audioBuffer, {
-        contentType: 'audio/mpeg',
-        upsert: true,
-      });
+      .upload(path, audioBuffer, { contentType: 'audio/mpeg', upsert: true });
+    if (uploadErr) return { statusCode: 500, headers: h, body: JSON.stringify({ error: `Audio storage upload failed: ${uploadErr.message}` }) };
 
-    if (uploadError) throw new Error(`Audio upload failed: ${uploadError.message}`);
+    const { data: urlData } = supabase.storage.from('audio').getPublicUrl(path);
+    const audioUrl = urlData.publicUrl;
 
-    // Get signed URL (1 year expiry — users can download)
-    const { data: urlData } = await supabase.storage
-      .from('audio')
-      .createSignedUrl(audioPath, 60 * 60 * 24 * 365);
-
-    // Update record
+    // Save and deduct credit
     await supabase.from('tax_returns').update({
-      audio_url:  urlData.signedUrl,
-      status:     'audio_ready',
-      updated_at: new Date().toISOString(),
+      audio_url: audioUrl,
+      status:    'audio_ready',
     }).eq('id', taxReturnId);
 
-    // Deduct one video credit from usage counter
-    await supabase.rpc('increment_credits_used', { p_user_id: userId });
-
-    // Audit log
-    await supabase.from('audit_log').insert({
-      user_id:  userId,
-      action:   'audio_generated',
-      resource: taxReturnId,
+    await supabase.from('usage_counters').delete().eq('user_id', user.id);
+    await supabase.from('usage_counters').insert({
+      user_id: user.id,
+      credits_used: creditsUsed + 1,
+      projections_used: usage?.projections_used || 0,
     });
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true, audioUrl: urlData.signedUrl }),
-    };
+    await supabase.from('audit_log').insert({
+      user_id: user.id,
+      action: 'audio_generated',
+      description: `Audio walkthrough generated for return ${taxReturnId}. Credit deducted (${creditsUsed + 1}/${creditsTotal} used).`,
+    }).catch(() => {});
+
+    return { statusCode: 200, headers: h, body: JSON.stringify({ success: true, audioUrl }) };
 
   } catch (err) {
-    console.error('[generate-audio] Error:', err);
-    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    console.error('generate-audio error:', err.message);
+    await supabase.from('audit_log').insert({
+      user_id: user?.id,
+      action: 'audio_error',
+      description: `Audio generation failed for ${taxReturnId}: ${err.message}`,
+    }).catch(() => {});
+    return { statusCode: 500, headers: h, body: JSON.stringify({ error: err.message }) };
   }
 };
