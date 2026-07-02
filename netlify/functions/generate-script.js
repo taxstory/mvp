@@ -1,87 +1,122 @@
 // netlify/functions/generate-script.js
-// Uses Anthropic Claude API to generate a personalized tax return walkthrough script.
-// Input: PII-free parsed tax data. Output: 2–3 minute conversational video script.
+// Generates a warm, plain-English client video script from parsed tax data.
+// Uses raw fetch to the Anthropic API — matches the SES-sandbox-safe pattern
+// already established in parse-return.js. Does NOT use @anthropic-ai/sdk.
 
-const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const supabase  = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+exports.config = { timeout: 26 };
+
+const SUPABASE_URL  = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
+  const h = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: h, body: '' };
+  if (event.httpMethod !== 'POST')   return { statusCode: 405, headers: h, body: JSON.stringify({ error: 'Method not allowed' }) };
+
+  if (!SUPABASE_URL || !SUPABASE_KEY) return { statusCode: 500, headers: h, body: JSON.stringify({ error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars' }) };
+  if (!ANTHROPIC_KEY)                 return { statusCode: 500, headers: h, body: JSON.stringify({ error: 'Missing ANTHROPIC_API_KEY env var' }) };
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // Auth
+  const token = (event.headers.authorization || '').replace('Bearer ', '');
+  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+  if (authErr || !user) return { statusCode: 401, headers: h, body: JSON.stringify({ error: 'Unauthorized' }) };
+
+  // Body
+  let taxReturnId;
+  try { ({ taxReturnId } = JSON.parse(event.body || '{}')); }
+  catch { return { statusCode: 400, headers: h, body: JSON.stringify({ error: 'Invalid JSON body' }) }; }
+  if (!taxReturnId) return { statusCode: 400, headers: h, body: JSON.stringify({ error: 'Missing taxReturnId' }) };
 
   try {
-    const { taxReturnId, userId } = JSON.parse(event.body);
-
     // Verify ownership and fetch parsed data
-    const { data: record, error } = await supabase
+    const { data: taxReturn, error: fetchErr } = await supabase
       .from('tax_returns')
-      .select('id, user_id, parsed_data, status')
+      .select('id, user_id, parsed_data, clients(name)')
       .eq('id', taxReturnId)
       .single();
 
-    if (error || !record) return { statusCode: 404, body: 'Not found' };
-    if (record.user_id !== userId) return { statusCode: 403, body: 'Forbidden' };
-    if (record.status !== 'parsed') return { statusCode: 400, body: 'Return not yet parsed' };
+    if (fetchErr || !taxReturn) return { statusCode: 404, headers: h, body: JSON.stringify({ error: 'Tax return not found' }) };
+    if (taxReturn.user_id !== user.id) return { statusCode: 403, headers: h, body: JSON.stringify({ error: 'Forbidden — not your return' }) };
+    if (!taxReturn.parsed_data) return { statusCode: 400, headers: h, body: JSON.stringify({ error: 'Return has not been parsed yet' }) };
 
-    const data = record.parsed_data;
+    const pd = taxReturn.parsed_data;
+    const clientName = taxReturn.clients?.name || 'your client';
 
-    // ── Claude script generation prompt ──────────────────────────────
-    const prompt = `You are a friendly, knowledgeable CPA creating a personalized video walkthrough for a client's tax return. Write a warm, clear, conversational script that a client can easily understand. Avoid jargon. The script should run approximately 2–3 minutes when read aloud at a comfortable pace.
+    const prompt = `Write a warm, plain-English 2-3 minute video script walking ${clientName} through their tax return. This is spoken narration for a voiceover — write it as natural speech, not a written document.
 
-Here is the client's tax return data (all PII has been removed):
-${JSON.stringify(data, null, 2)}
+Tax data (already PII-free — no names, SSNs, or personal identifiers were extracted):
+${JSON.stringify(pd, null, 2)}
 
-Write the script in sections:
-1. Brief friendly greeting (15 seconds)
-2. Overview of their tax situation (20 seconds)  
-3. Key income sources (30 seconds)
-4. How they were taxed — effective rate, key deductions (40 seconds)
-5. Their refund or amount owed, and why (30 seconds)
-6. 2–3 personalized planning tips for next year based on their situation (30 seconds)
-7. Warm close with CTA to schedule a follow-up (15 seconds)
+Structure the script with these sections, flowing naturally without explicit headers:
+1. Warm greeting and overview of how their year went
+2. Income sources explained simply
+3. How their taxes were calculated (deductions, bracket, effective rate)
+4. The bottom line — refund or amount owed, explained clearly
+5. One or two practical planning tips for next year
+6. Warm closing inviting questions
 
-IMPORTANT:
-- Never reference any personal identifiers — no names, SSNs, addresses
-- Speak as if talking directly to the client ("you" and "your")
-- Use plain language: "you earned" not "gross wages were"
-- Format numbers as dollars with commas (e.g., $42,500)
-- Keep it warm, professional, and reassuring`;
+Rules:
+- No tax jargon without immediate plain-English explanation
+- Second person ("you", "your") throughout
+- Conversational tone, as if explaining to a friend
+- 300-450 words total
+- Do not include any names, SSNs, or addresses — speak generically ("you" not a specific name) since none were provided in the data
+- Return ONLY the script text, no headers, no markdown, no preamble`;
 
-    const response = await anthropic.messages.create({
-      model:      'claude-opus-4-5',
-      max_tokens: 1500,
-      messages: [{ role: 'user', content: prompt }],
+    // Raw fetch to Anthropic API — no SDK, avoids Netlify SES sandbox issues
+    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type':      'application/json',
+        'x-api-key':          ANTHROPIC_KEY,
+        'anthropic-version':  '2023-06-01',
+      },
+      body: JSON.stringify({
+        model:      'claude-opus-4-20250514',
+        max_tokens: 1024,
+        messages: [{ role: 'user', content: prompt }],
+      }),
     });
 
-    const script = response.content[0].text;
+    if (!anthropicRes.ok) {
+      const errText = await anthropicRes.text();
+      return { statusCode: 500, headers: h, body: JSON.stringify({ error: `Anthropic API error ${anthropicRes.status}: ${errText.slice(0, 300)}` }) };
+    }
 
-    // Save script and update status
-    await supabase.from('tax_returns').update({
-      script_text: script,
-      status:      'script_ready',
-      updated_at:  new Date().toISOString(),
+    const anthropicData = await anthropicRes.json();
+    const script = anthropicData.content?.[0]?.text?.trim();
+
+    if (!script) return { statusCode: 500, headers: h, body: JSON.stringify({ error: 'Claude returned an empty script' }) };
+
+    // Save script and advance status
+    const { error: updateErr } = await supabase.from('tax_returns').update({
+      script,
+      status: 'script_ready',
     }).eq('id', taxReturnId);
 
-    // Audit log
-    await supabase.from('audit_log').insert({
-      user_id:  userId,
-      action:   'script_generated',
-      resource: taxReturnId,
-      metadata: { model: 'claude-opus-4-5', tokens: response.usage?.output_tokens },
-    });
+    if (updateErr) console.error('generate-script DB update warning:', updateErr.message);
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true, script }),
-    };
+    await supabase.from('audit_log').insert({
+      user_id: user.id,
+      action: 'script_generated',
+      description: `Script generated for return ${taxReturnId} (${script.split(' ').length} words)`,
+    }).catch(() => {});
+
+    return { statusCode: 200, headers: h, body: JSON.stringify({ success: true, script }) };
 
   } catch (err) {
-    console.error('[generate-script] Error:', err);
-    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    console.error('generate-script error:', err.message);
+    await supabase.from('audit_log').insert({
+      user_id: user?.id,
+      action: 'script_error',
+      description: `Script generation failed for ${taxReturnId}: ${err.message}`,
+    }).catch(() => {});
+    return { statusCode: 500, headers: h, body: JSON.stringify({ error: err.message }) };
   }
 };
