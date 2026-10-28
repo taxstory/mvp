@@ -82,10 +82,10 @@ export function BillingPage() {
     setPortalLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/.netlify/functions/create-portal-session', {
+      const res = await fetch('/.netlify/functions/create-checkout', {   // the billing portal is served by create-checkout (portalSession: true)
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ portalSession: true, userId: user.id }),
       });
       if (!res.ok) throw new Error('Could not open billing portal');
       const { url } = await res.json();

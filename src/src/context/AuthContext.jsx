@@ -1,42 +1,76 @@
-// STAND-IN (scaffold) — NOT your real file. It exists only so this snapshot can build and run. In your real repository keep YOUR version; the merge script never copies this one.
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-const AuthCtx = createContext(null);
+const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(null);
+  const [user, setUser]       = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const loadProfile = useCallback(async (uid) => {
-    const { data } = await supabase.from('profiles').select('*').eq('id', uid).maybeSingle();
-    setProfile(data || null);
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchProfile(session.user.id);
+      else setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchProfile(session.user.id);
+      else { setProfile(null); setLoading(false); }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    let alive = true;
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!alive) return;
-      setSession(data.session);
-      if (data.session) await loadProfile(data.session.user.id);
-      if (alive) setLoading(false);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
-      setSession(s);
-      if (s) await loadProfile(s.user.id); else setProfile(null);
-    });
-    return () => { alive = false; sub.subscription.unsubscribe(); };
-  }, [loadProfile]);
+  async function fetchProfile(userId) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    setProfile(data);
+    setLoading(false);
+  }
 
-  const signOut = useCallback(async () => { await supabase.auth.signOut(); setSession(null); setProfile(null); }, []);
-  const refreshProfile = useCallback(async () => { if (session) await loadProfile(session.user.id); }, [session, loadProfile]);
+  async function signUp({ email, password, role, firmName }) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { role, firm_name: firmName },
+        emailRedirectTo: `${import.meta.env.VITE_APP_URL}/auth/callback`,
+      },
+    });
+    return { data, error };
+  }
 
-  return <AuthCtx.Provider value={{ user: session?.user ?? null, session, profile, loading, signOut, refreshProfile }}>{children}</AuthCtx.Provider>;
+  async function signIn({ email, password }) {
+    return supabase.auth.signInWithPassword({ email, password });
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
+  }
+
+  async function resetPassword(email) {
+    return supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,   // must match the /reset-password route
+    });
+  }
+
+  const value = { user, profile, loading, signUp, signIn, signOut, resetPassword };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
-  const ctx = useContext(AuthCtx);
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
   return ctx;
-}
+};

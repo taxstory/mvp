@@ -1,34 +1,59 @@
-// STAND-IN (scaffold) — NOT your real file. It exists only so this snapshot can build and run. In your real repository keep YOUR version; the merge script never copies this one.
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ResetPasswordPage() {
-  const recovering = typeof window !== 'undefined' && /type=recovery/.test(window.location.hash);
-  const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
-  const [error, setError] = useState(''); const [notice, setNotice] = useState('');
-  async function request(e) {
-    e.preventDefault(); setError(''); setNotice('');
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
-    if (err) setError(err.message); else setNotice('If that address has an account, a reset link is on its way.');
+  const { resetPassword } = useAuth();
+  const [email,   setEmail]   = useState('');
+  const [sent,    setSent]    = useState(false);
+  const [error,   setError]   = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await resetPassword(email);
+    if (error) { setError(error.message); setLoading(false); }
+    else setSent(true);
   }
-  async function update(e) {
-    e.preventDefault(); setError(''); setNotice('');
-    const { error: err } = await supabase.auth.updateUser({ password });
-    if (err) setError(err.message); else setNotice('Password updated. You can sign in now.');
-  }
+
   return (
-    <main style={{ maxWidth: 380, margin: '10vh auto', padding: 24 }}>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{recovering ? 'Choose a new password' : 'Reset your password'}</h1>
-      <form onSubmit={recovering ? update : request} style={{ display: 'grid', gap: 10 }}>
-        {recovering
-          ? <input type="password" placeholder="New password (8+ characters)" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
-          : <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />}
-        {error && <div role="alert" style={{ color: '#b00020', fontSize: 13 }}>{error}</div>}
-        {notice && <div role="status" style={{ fontSize: 13 }}>{notice}</div>}
-        <button className="ts-btn ts-btn-primary">{recovering ? 'Update password' : 'Send reset link'}</button>
-      </form>
-      <p style={{ fontSize: 13, marginTop: 16 }}><Link to="/login">Back to sign in</Link></p>
-    </main>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="p-6">
+        <Link to="/" className="flex items-center gap-2 w-fit">
+          <div className="w-7 h-7 rounded-lg bg-brand-purple flex items-center justify-center">
+            <span className="text-white font-bold text-xs">TS</span>
+          </div>
+          <span className="font-serif font-bold text-lg text-brand-dark">TaxStory</span>
+        </Link>
+      </div>
+      <div className="flex-1 flex items-center justify-center px-6">
+        <div className="w-full max-w-sm">
+          {sent ? (
+            <div className="text-center">
+              <div className="text-5xl mb-4">📬</div>
+              <h2 className="font-serif text-2xl font-bold text-brand-dark mb-2">Check your email</h2>
+              <p className="text-gray-500 text-sm">We sent a reset link to <strong>{email}</strong>.</p>
+              <Link to="/login" className="block mt-6 text-sm text-brand-purple hover:underline">Back to sign in</Link>
+            </div>
+          ) : (
+            <>
+              <h1 className="font-serif text-3xl font-bold text-brand-dark mb-2">Reset your password</h1>
+              <p className="text-gray-500 text-sm mb-8">Enter your email and we'll send you a reset link.</p>
+              {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-6">{error}</div>}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                  className="input" placeholder="you@yourfirm.com" />
+                <button type="submit" disabled={loading}
+                  className="w-full bg-brand-purple hover:bg-purple-700 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50">
+                  {loading ? 'Sending…' : 'Send Reset Link'}
+                </button>
+              </form>
+              <Link to="/login" className="block text-center mt-4 text-sm text-brand-purple hover:underline">Back to sign in</Link>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

@@ -1,3 +1,3 @@
-// STAND-IN (scaffold) — NOT your real file. It exists only so this snapshot can build and run. In your real repository keep YOUR version; the merge script never copies this one.
+// Re-export so pages can import useAuth from hooks/ or context/.
 export { useAuth } from '../context/AuthContext';
 export { useAuth as default } from '../context/AuthContext';
