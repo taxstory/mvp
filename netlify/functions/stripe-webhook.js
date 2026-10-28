@@ -1,138 +1,127 @@
 // netlify/functions/stripe-webhook.js
+//
+// Guarantees (see tests/security/webhook.test.mjs and billing.test.mjs):
+//   * Authenticated by Stripe's signature over the RAW body.
+//   * Idempotent: every event id is claimed in `stripe_events`; redeliveries are acknowledged without re-processing.
+//   * Retry-safe: any failure releases the claim and returns 500 so Stripe redelivers (previously failures were
+//     logged and the endpoint still answered 200, so a paid-for credit pack could be lost forever).
+//   * Order-safe: subscription state is applied only if the event is not older than what is stored.
+//   * The plan is derived from the Stripe PRICE ID. It never defaults to a paid tier.
+//   * Usage allowances are ANNUAL: a monthly invoice never resets them (roll_usage_period resets only after a year).
+//   * Purchased credits are granted through `grant_pack_credits`, idempotent on the event id.
+
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
+const { logError } = require('./_logError');
 
 exports.config = { timeout: 26 };
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const supabase = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const supabase = createClient(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-const TIER_CREDITS = { cpa_basic: 0, cpa_pro: 100, ria_basic: 0, ria_pro: 25 };
-const TIER_PROJECTIONS = { cpa_basic: 100, cpa_pro: 300, ria_basic: 50, ria_pro: 150 };
+const TIERS = ['cpa_basic', 'cpa_pro', 'ria_basic', 'ria_pro'];
+const PRICE_ENV = { cpa_basic: 'STRIPE_PRICE_CPA_BASIC', cpa_pro: 'STRIPE_PRICE_CPA_PRO', ria_basic: 'STRIPE_PRICE_RIA_BASIC', ria_pro: 'STRIPE_PRICE_RIA_PRO' };
+const PACKS = { credits_10: 10, credits_25: 25, credits_50: 50 };
 
-// Safe insert — delete first to avoid relying on a unique constraint that
-// doesn't exist on subscriptions.user_id. Matches the pattern already
-// established and commented in create-checkout.js.
-async function upsertSubscription(payload) {
-  await supabase.from('subscriptions').delete().eq('user_id', payload.user_id);
-  return supabase.from('subscriptions').insert(payload);
+function priceToTier() {
+  const m = {};
+  for (const [tier, env] of Object.entries(PRICE_ENV)) if (process.env[env]) m[process.env[env]] = tier;
+  return m;
 }
 
-async function upsertUsageCounters(userId, resetValues = {}) {
-  await supabase.from('usage_counters').delete().eq('user_id', userId);
-  return supabase.from('usage_counters').insert({
-    user_id: userId,
-    credits_used: 0,
-    projections_used: 0,
-    ...resetValues,
+/** Plan from the subscription's price id. Metadata is a fallback ONLY when no price ids are configured. Never defaults. */
+function tierOf(sub) {
+  const map = priceToTier();
+  for (const item of sub.items?.data || []) { const t = map[item.price?.id]; if (t) return t; }
+  if (Object.keys(map).length === 0 && TIERS.includes(sub.metadata?.tier)) return sub.metadata.tier;
+  throw new Error(`Cannot determine plan for subscription ${sub.id}: price not recognised`);
+}
+
+async function userOf(sub) {
+  if (sub.metadata?.supabase_user_id) return sub.metadata.supabase_user_id;
+  const { data } = await supabase.from('subscriptions').select('user_id').eq('stripe_customer_id', sub.customer).maybeSingle();
+  if (data?.user_id) return data.user_id;
+  try { const c = await stripe.customers.retrieve(sub.customer); return c?.metadata?.supabase_user_id || null; } catch { return null; }
+}
+
+const iso = (sec) => (sec ? new Date(sec * 1000).toISOString() : null);
+const periodEnd = (sub) => iso(sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end);
+
+async function rpc(name, args) {
+  const { data, error } = await supabase.rpc(name, args);
+  if (error) throw new Error(`${name} failed: ${error.message}`);
+  return data;
+}
+
+async function applySubscription(stripeEvent) {
+  const sub = stripeEvent.data.object;
+  const uid = await userOf(sub);
+  if (!uid) { logError('stripe-webhook', new Error(`No user linked to subscription ${sub.id} (event ${stripeEvent.id})`), {}); return; }   // nothing a retry can fix
+  const tier = tierOf(sub);
+  const applied = await rpc('apply_subscription_state', {
+    p_user: uid, p_sub_id: sub.id, p_customer: sub.customer, p_status: stripeEvent.type === 'customer.subscription.deleted' ? 'canceled' : sub.status,
+    p_tier: tier, p_period_end: periodEnd(sub), p_event_created: stripeEvent.created,
   });
+  // A brand-new subscription starts a fresh annual allowance. Updates and renewals never reset it.
+  if (applied && stripeEvent.type === 'customer.subscription.created') {
+    await rpc('roll_usage_period', { p_user: uid, p_period_start: iso(sub.start_date || stripeEvent.created), p_key: `sub-start:${sub.id}`, p_force: true });
+  }
 }
 
-function logError(context, err) {
-  // Centralized error surface point for backend monitoring.
-  // TODO: wire to Sentry or another alerting service — see audit finding
-  // "No Backend Error Monitoring". For now this guarantees every failure
-  // path is at least consistently logged with structured context.
-  console.error(`[stripe-webhook] ${context}:`, err?.message || err);
+async function applyCreditPack(stripeEvent) {
+  const session = stripeEvent.data.object;
+  if (session.mode !== 'payment') return;                                   // subscriptions arrive via customer.subscription.*
+  if (session.payment_status !== 'paid') return;                            // only grant once the money has actually arrived
+  const uid = session.metadata?.supabase_user_id;
+  const pack = session.metadata?.credit_pack;
+  const credits = PACKS[pack];
+  if (!uid || !credits || String(credits) !== String(session.metadata?.credits_to_add)) {
+    throw new Error(`Credit pack session ${session.id} has invalid metadata`);   // loud: a customer paid and we cannot credit them
+  }
+  await rpc('grant_pack_credits', { p_user: uid, p_credits: credits, p_event_id: stripeEvent.id });
+}
+
+async function applyInvoicePaid(stripeEvent) {
+  const invoice = stripeEvent.data.object;
+  if (invoice.billing_reason !== 'subscription_cycle' || !invoice.subscription) return;
+  const sub = await stripe.subscriptions.retrieve(invoice.subscription);
+  const uid = await userOf(sub);
+  if (!uid) return;
+  const start = invoice.lines?.data?.[0]?.period?.start || invoice.period_end || invoice.created;
+  // Allowances are per YEAR while invoices are monthly: this resets only when a full year has elapsed.
+  await rpc('roll_usage_period', { p_user: uid, p_period_start: iso(start), p_key: `invoice:${invoice.id}`, p_force: false });
 }
 
 exports.handler = async (event) => {
-  const sig = event.headers['stripe-signature'];
+  const sig = event.headers['stripe-signature'] || event.headers['Stripe-Signature'];
+  const raw = event.isBase64Encoded ? Buffer.from(event.body || '', 'base64').toString('utf8') : event.body;
   let stripeEvent;
-
   try {
-    stripeEvent = stripe.webhooks.constructEvent(event.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    stripeEvent = stripe.webhooks.constructEvent(raw, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
-    logError('signature verification failed', err);
-    return { statusCode: 400, body: `Webhook Error: ${err.message}` };
+    logError('stripe-webhook signature verification failed', err);
+    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid signature' }) };
   }
+
+  let claim;
+  try { claim = await rpc('claim_stripe_event', { p_id: stripeEvent.id, p_type: stripeEvent.type }); }
+  catch (err) { logError('stripe-webhook claim failed', err, { eventId: stripeEvent.id }); return { statusCode: 500, body: JSON.stringify({ error: 'Temporarily unavailable' }) }; }
+  if (claim === 'duplicate')   return { statusCode: 200, body: JSON.stringify({ received: true, duplicate: true }) };
+  if (claim === 'in_progress') return { statusCode: 409, body: JSON.stringify({ error: 'Event is being processed' }) };   // Stripe will retry
 
   try {
     switch (stripeEvent.type) {
-
       case 'customer.subscription.created':
-      case 'customer.subscription.updated': {
-        const sub  = stripeEvent.data.object;
-        const uid  = sub.metadata?.supabase_user_id;
-        const tier = sub.metadata?.tier;
-        if (!uid) break;
-
-        const { error: subErr } = await upsertSubscription({
-          user_id:                uid,
-          stripe_subscription_id: sub.id,
-          stripe_customer_id:     sub.customer,
-          status:                 sub.status,
-          tier:                   tier || 'cpa_pro',
-          current_period_end:     new Date(sub.current_period_end * 1000).toISOString(),
-        });
-        if (subErr) logError(`subscription upsert failed for user ${uid}`, subErr);
-
-        if (tier) {
-          const { error: usageErr } = await upsertUsageCounters(uid);
-          if (usageErr) logError(`usage_counters reset failed for user ${uid}`, usageErr);
-        }
-        break;
-      }
-
-      case 'customer.subscription.deleted': {
-        const sub = stripeEvent.data.object;
-        const uid = sub.metadata?.supabase_user_id;
-        if (!uid) break;
-        const { error } = await supabase.from('subscriptions').update({ status: 'canceled' }).eq('user_id', uid);
-        if (error) logError(`subscription cancel failed for user ${uid}`, error);
-        break;
-      }
-
-      case 'checkout.session.completed': {
-        const session = stripeEvent.data.object;
-        if (session.mode !== 'payment') break; // subscriptions handled above
-
-        const uid          = session.metadata?.supabase_user_id;
-        const creditsToAdd = parseInt(session.metadata?.credits_to_add || '0', 10);
-        if (!uid || !creditsToAdd) break;
-
-        const { data: usage, error: fetchErr } = await supabase
-          .from('usage_counters').select('credits_used').eq('user_id', uid).maybeSingle();
-        if (fetchErr) { logError(`usage_counters fetch failed for user ${uid}`, fetchErr); break; }
-
-        const currentUsed = usage?.credits_used || 0;
-        const newUsed      = Math.max(0, currentUsed - creditsToAdd);
-
-        const { error: updateErr } = await upsertUsageCounters(uid, { credits_used: newUsed });
-        if (updateErr) { logError(`credit pack apply failed for user ${uid}`, updateErr); break; }
-
-        console.log(`Added ${creditsToAdd} credits for user ${uid}. credits_used: ${currentUsed} → ${newUsed}`);
-        break;
-      }
-
-      case 'invoice.paid': {
-        const invoice = stripeEvent.data.object;
-        if (invoice.billing_reason !== 'subscription_cycle') break;
-
-        const sub  = await stripe.subscriptions.retrieve(invoice.subscription);
-        const uid  = sub.metadata?.supabase_user_id;
-        const tier = sub.metadata?.tier;
-        if (!uid) break;
-
-        const { error: usageErr } = await upsertUsageCounters(uid);
-        if (usageErr) logError(`annual renewal reset failed for user ${uid}`, usageErr);
-
-        const { error: subErr } = await supabase.from('subscriptions').update({
-          status:             'active',
-          current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
-        }).eq('user_id', uid);
-        if (subErr) logError(`renewal period_end update failed for user ${uid}`, subErr);
-        break;
-      }
-
-      default:
-        break;
+      case 'customer.subscription.updated':
+      case 'customer.subscription.deleted': await applySubscription(stripeEvent); break;
+      case 'checkout.session.completed':    await applyCreditPack(stripeEvent);   break;
+      case 'invoice.paid':                  await applyInvoicePaid(stripeEvent);  break;
+      default: break;
     }
-
+    await rpc('finish_stripe_event', { p_id: stripeEvent.id, p_ok: true });
     return { statusCode: 200, body: JSON.stringify({ received: true }) };
-
   } catch (err) {
-    logError('unhandled webhook error', err);
-    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    logError('stripe-webhook processing failed', err, { eventId: stripeEvent.id, type: stripeEvent.type });
+    try { await rpc('finish_stripe_event', { p_id: stripeEvent.id, p_ok: false }); } catch (e) { logError('stripe-webhook release failed', e, {}); }
+    return { statusCode: 500, body: JSON.stringify({ error: 'Processing failed; will be retried' }) };   // never echo err.message to Stripe/logs consumers
   }
 };
