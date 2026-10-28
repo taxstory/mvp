@@ -8,7 +8,9 @@
     "preview": "vite preview",
     "test": "node tests/engine/run.mjs",
     "test:engine": "node tests/engine/run.mjs",
-    "test:ui": "vitest run"
+    "test:ui": "vitest run",
+    "security:guard": "node scripts/check-deprecated-endpoints.cjs",
+    "test:security": "node --test tests/security/*.test.cjs"
   },
   "dependencies": {
     "@sentry/react": "10.76.2",
