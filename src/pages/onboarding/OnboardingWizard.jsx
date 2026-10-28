@@ -19,7 +19,7 @@ const STEPS = [
 const COLORS = ['var(--color-purple)','var(--color-blue-mid)','var(--color-green-mid)','var(--color-red-mid)','var(--color-amber)','var(--color-violet)','var(--color-teal)','var(--color-dark)'];
 
 export default function OnboardingWizard() {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const navigate  = useNavigate();
 
   const [step,    setStep]    = useState(1);
@@ -49,19 +49,21 @@ export default function OnboardingWizard() {
   // ── Step 1 handlers ────────────────────────────────────────
   async function nextStep1() {
     if (!firmName.trim()) { setError('Please enter your firm name.'); return; }
-    if (!practiceType)    { setError('Please select your practice type.'); return; }
-    if (!primaryUse)      { setError('Please select your primary use.'); return; }
-    setError('');
-
-    setSaving(true);
-    await supabase.from('profiles').upsert({
-      id: user.id, firm_name: firmName.trim(), practice_type: practiceType, primary_use: primaryUse,
-    });
-    await supabase.from('onboarding_state').upsert({
-      user_id: user.id, step: 2, firm_name: firmName.trim(), practice_type: practiceType, primary_use: primaryUse,
-    }, { onConflict: 'user_id' });
-    setSaving(false);
-    setStep(2);
+    if (!practiceType) { setError('Please select your practice type.'); return; }
+    if (!primaryUse) { setError('Please select your primary use.'); return; }
+    setError(''); setSaving(true);
+    try {
+      const { error: profileError } = await supabase.from('profiles').update({
+        firm_name: firmName.trim(), practice_type: practiceType, primary_use: primaryUse,
+      }).eq('id', user.id).select('id').single();
+      if (profileError) throw profileError;
+      const { error: stateError } = await supabase.from('onboarding_state').upsert({
+        user_id: user.id, step: 2, firm_name: firmName.trim(), practice_type: practiceType, primary_use: primaryUse,
+      }, { onConflict: 'user_id' });
+      if (stateError) throw stateError;
+      setStep(2);
+    } catch (e) { setError(`Unable to save practice details: ${e.message || 'Please try again.'}`); }
+    finally { setSaving(false); }
   }
 
   // ── Step 2 handlers ────────────────────────────────────────
@@ -111,11 +113,14 @@ export default function OnboardingWizard() {
     setError('');
     if (!parseResult) { setError('Parse a return first, or click "Use demo return".'); return; }
     setSaving(true);
-    await supabase.from('onboarding_state').upsert({
-      user_id: user.id, step: 3, used_demo_return: useDemo,
-    }, { onConflict: 'user_id' });
-    setSaving(false);
-    setStep(3);
+    try {
+      const { error } = await supabase.from('onboarding_state').upsert({
+        user_id: user.id, step: 3, used_demo_return: useDemo,
+      }, { onConflict: 'user_id' });
+      if (error) throw error;
+      setStep(3);
+    } catch (e) { setError(`Unable to save onboarding progress: ${e.message || 'Please try again.'}`); }
+    finally { setSaving(false); }
   }
 
   // ── Step 3 handlers ────────────────────────────────────────
@@ -127,33 +132,36 @@ export default function OnboardingWizard() {
   }
 
   async function finish() {
-    setSaving(true);
-    setError('');
-
-    let logoUrl = null;
-    if (logoFile) {
-      const info = logoUploadInfo(logoFile);          // images only; a rejected logo is simply skipped here (the wizard can be completed without one)
-      const path = `${user.id}/logo.${info.ext || 'png'}`;
-      const { error: uploadErr } = info.error ? { error: info.error } : await supabase.storage
-        .from('firm-assets').upload(path, logoFile, { upsert: true, contentType: info.contentType });
-      if (!uploadErr) {
-        const { data: { publicUrl } } = supabase.storage
-          .from('firm-assets').getPublicUrl(path);
+    setSaving(true); setError('');
+    try {
+      let logoUrl = null;
+      if (logoFile) {
+        const info = logoUploadInfo(logoFile);
+        if (info.error) throw new Error(info.error);
+        const path = `${user.id}/logo.${info.ext || 'png'}`;
+        const { error: uploadErr } = await supabase.storage
+          .from('firm-assets').upload(path, logoFile, { upsert: true, contentType: info.contentType });
+        if (uploadErr) throw uploadErr;
+        const { data: { publicUrl } } = supabase.storage.from('firm-assets').getPublicUrl(path);
         logoUrl = publicUrl;
       }
-    }
-
-    await supabase.from('profiles').upsert({
-      id: user.id, brand_color: brandColor, logo_url: logoUrl,
-      onboarding_completed: true, onboarding_completed_at: new Date().toISOString(),
-    });
-
-    await supabase.from('onboarding_state').upsert({
-      user_id: user.id, step: 3, completed: true, brand_color: brandColor, logo_url: logoUrl,
-    }, { onConflict: 'user_id' });
-
-    setSaving(false);
-    navigate('/dashboard');
+      // Do not erase an existing logo if the user did not upload a replacement.
+      const changes = { brand_color: brandColor, onboarding_completed: true,
+        onboarding_completed_at: new Date().toISOString() };
+      if (logoUrl) changes.logo_url = logoUrl;
+      const { data: saved, error: profileError } = await supabase.from('profiles')
+        .update(changes).eq('id', user.id).select('id,onboarding_completed').single();
+      if (profileError) throw profileError;
+      if (!saved?.onboarding_completed) throw new Error('The profile did not confirm onboarding completion.');
+      const { error: stateError } = await supabase.from('onboarding_state').upsert({
+        user_id: user.id, step: 3, completed: true, brand_color: brandColor, logo_url: logoUrl,
+      }, { onConflict: 'user_id' });
+      if (stateError) throw stateError;
+      const refreshed = await refreshProfile();
+      if (!refreshed?.onboarding_completed) throw new Error('The updated account status could not be verified.');
+      navigate('/dashboard', { replace: true });
+    } catch (e) { setError(`Unable to finish onboarding: ${e.message || 'Please try again.'}`); }
+    finally { setSaving(false); }
   }
 
   // ── Layout helpers ─────────────────────────────────────────

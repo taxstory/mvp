@@ -27,13 +27,15 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function fetchProfile(userId) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
+    if (error) { setLoading(false); throw error; }
     setProfile(data);
     setLoading(false);
+    return data;
   }
 
   async function signUp({ email, password, role, firmName }) {
@@ -64,7 +66,8 @@ export function AuthProvider({ children }) {
     });
   }
 
-  const value = { user, profile, loading, signUp, signIn, signOut, resetPassword };
+  const refreshProfile = () => user ? fetchProfile(user.id) : Promise.resolve(null);
+  const value = { user, profile, loading, refreshProfile, signUp, signIn, signOut, resetPassword };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
