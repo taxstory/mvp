@@ -60,7 +60,7 @@ export function AuthProvider({ children }) {
 
   async function resetPassword(email) {
     return supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${import.meta.env.VITE_APP_URL}/auth/reset-password`,
+      redirectTo: `${window.location.origin}/reset-password`,   // must match the /reset-password route
     });
   }
 

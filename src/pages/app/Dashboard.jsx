@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { FEATURES } from '../../config/features';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSubscription } from '../../hooks/useSubscription';
-import { supabase } from '../../lib/supabase';
+import { supabase }         from '../../lib/supabase';
+import GettingStarted       from '../../components/GettingStarted';
 
 function timeAgo(ts) {
   const s = Math.floor((Date.now() - new Date(ts)) / 1000);
@@ -21,13 +23,14 @@ function greeting() {
 }
 
 export default function Dashboard() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const { creditsRemaining, creditsTotal, projectionsRemaining } = useSubscription();
   const [stats, setStats]       = useState(null);
   const [activity, setActivity] = useState([]);
   const [clients, setClients]   = useState([]);
   const [unread, setUnread]     = useState(0);
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading]         = useState(true);
+  const [gsHidden, setGsHidden]       = useState(false);
 
   const name = profile?.firm_name?.split(' ')[0] || 'there';
   const credits = creditsRemaining ?? 0;
@@ -35,13 +38,15 @@ export default function Dashboard() {
   const creditPct = creditTotal > 0 ? Math.round((credits / creditTotal) * 100) : 0;
 
   useEffect(() => {
-    if (!profile?.id) return;
+    // Use user.id (auth.users.id) — the same FK every other page (Clients, Projections, etc.)
+    // queries against. profile.id is not guaranteed to be populated or to match in every case.
+    if (!user?.id) return;
     fetchAll();
-  }, [profile]);
+  }, [user]);
 
   async function fetchAll() {
     setLoading(true);
-    const uid = profile.id;
+    const uid = user.id;
 
     const [
       { count: clientCount },
@@ -74,9 +79,17 @@ export default function Dashboard() {
     setLoading(false);
   }
 
+  // Derive getting-started completion from live stats
+  const completedSteps = {
+    return_uploaded: (stats?.cpaCount || 0) > 0,
+    video_generated: (stats?.videos   || 0) > 0,
+    // link_sent: we'd need a video_share_links count — approximate with video count for now
+    link_sent:       (stats?.videos   || 0) > 0,
+  };
+
   const activityColor = (type) => {
     if (type?.includes('video'))  return 'var(--purple)';
-    if (type?.includes('intake')) return 'var(--amber)';
+    if (type?.includes('client'))  return 'var(--amber)';
     if (type?.includes('message'))return 'var(--teal)';
     return 'var(--dark)';
   };
@@ -95,6 +108,14 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Getting started — shown until all steps complete or user dismisses */}
+      {!loading && !gsHidden && (
+        <GettingStarted
+          completedSteps={completedSteps}
+          onDismiss={() => setGsHidden(true)}
+        />
+      )}
+
       {/* KPIs */}
       <div className="ts-g4" style={{marginBottom:'16px'}}>
         {loading ? (
@@ -106,9 +127,9 @@ export default function Dashboard() {
           ))
         ) : [
           { label:'Total clients',    val: stats.clients,    sub: `${stats.clients === 1 ? '1 client' : `${stats.clients} clients`} on file` },
-          { label:'Projections run',  val: stats.projections,sub: `${stats.cpaCount} CPA · ${stats.riaCount} RIA` },
+          { label:'Projections run',  val: stats.projections,sub: `${stats.cpaCount} tax · ${stats.riaCount} investment` },
           { label:'Videos generated', val: stats.videos,     sub: 'Audio walkthroughs' },
-          { label:'Video credits',    val: credits,          sub: `of ${creditTotal} remaining this year` },
+          { label:'Walkthrough credits',    val: credits,          sub: `of ${creditTotal} remaining this year` },
         ].map(k => (
           <div className="ts-kpi" key={k.label}>
             <div className="ts-kpi-label">{k.label}</div>
@@ -123,7 +144,7 @@ export default function Dashboard() {
         <span style={{fontSize:'22px'}}>🎬</span>
         <div style={{flex:1}}>
           <div style={{fontSize:'13px',fontWeight:700,color:'white',marginBottom:'5px'}}>
-            Video credits — {credits} of {creditTotal} remaining
+            Walkthrough credits — {credits} of {creditTotal} remaining
           </div>
           <div className="ts-progress-track">
             <div className="ts-progress-fill" style={{width:`${creditPct}%`}} />
@@ -142,8 +163,8 @@ export default function Dashboard() {
           {/* Tool cards — live counts */}
           <div className="ts-g3" style={{marginBottom:'12px'}}>
             {[
-              { to:'/cpa/projections', icon:'📊', label:'CPA Projections', sub:'Completed returns', val: loading ? '—' : stats.cpaCount, unit:'returns' },
-              { to:'/ria/projections', icon:'📈', label:'RIA Projections',  sub:'Multi-year planning', val: loading ? '—' : stats.riaCount, unit:'clients' },
+              { to:'/cpa/projections', icon:'📊', label:'Tax Projections',  sub:'Completed returns', val: loading ? '—' : stats.cpaCount, unit:'returns' },
+              ...(FEATURES.planningModules ? [{ to:'/ria/projections', icon:'📈', label:'Investment Planning', sub:'Multi-year planning', val: loading ? '—' : stats.riaCount, unit:'clients' }] : []),
               { to:'/cpa/video',       icon:'🎬', label:'Video Generator', sub:'Client walkthroughs', val: loading ? '—' : stats.videos, unit:'videos' },
             ].map(c => (
               <Link key={c.to} to={c.to} className="ts-card" style={{cursor:'pointer',textDecoration:'none',display:'block'}}>
@@ -168,7 +189,7 @@ export default function Dashboard() {
                 <Link to="/clients" className="ts-btn ts-btn-ghost ts-btn-sm">+ Add first client</Link>
               </div>
             ) : clients.map((c, i) => (
-              <div key={c.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'9px 0',borderBottom:i<clients.length-1?'1px solid #F0EEF8':'none'}}>
+              <div key={c.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'9px 0',borderBottom:i<clients.length-1?'1px solid var(--color-purple-faint)':'none'}}>
                 <div style={{display:'flex',alignItems:'center',gap:'9px'}}>
                   <div className="ts-av-sm">{c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
                   <div>
@@ -189,9 +210,9 @@ export default function Dashboard() {
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
               {[
                 {to:'/cpa/projections', icon:'📊', label:'CPA projection',   sub:'New analysis'},
-                {to:'/ria/projections', icon:'📈', label:'RIA projection',    sub:'Multi-year scenario'},
-                {to:'/cpa/video',       icon:'🎬', label:'Generate video',   sub:`${credits} credits left`},
-                {to:'/intake',          icon:'📋', label:'Send intake form', sub:'New client'},
+                ...(FEATURES.planningModules ? [{to:'/ria/projections', icon:'📈', label:'RIA projection',    sub:'Multi-year scenario'}] : []),
+                {to:'/cpa/video',       icon:'🎬', label:'Generate walkthrough',   sub:`${credits} credits left`},
+                {to:'/clients',         icon:'👤', label:'Add client',       sub:'New client record'},
               ].map(a => (
                 <Link key={a.to} to={a.to} style={{background:'var(--purple3)',borderRadius:'10px',padding:'10px 12px',cursor:'pointer',textDecoration:'none',display:'block'}}>
                   <div style={{fontSize:'12px',fontWeight:700,color:'var(--dark)'}}>{a.icon} {a.label}</div>
@@ -207,7 +228,7 @@ export default function Dashboard() {
             {loading ? (
               <div style={{padding:'20px 0',textAlign:'center',color:'var(--muted)',fontSize:'13px'}}>Loading…</div>
             ) : activity.length === 0 ? (
-              <div style={{padding:'20px 0',textAlign:'center',color:'var(--muted)',fontSize:'13px'}}>No activity yet. Start by running a projection.</div>
+              <div style={{padding:'20px 0',textAlign:'center',color:'var(--muted)',fontSize:'13px'}}>No activity yet. Generate your first walkthrough to see credit usage and events here.</div>
             ) : activity.map((a, i) => (
               <div className="ts-af" key={a.id||i}>
                 <div className="ts-af-dot" style={{background:activityColor(a.action)}} />
@@ -226,10 +247,10 @@ export default function Dashboard() {
         <div className="ts-card" style={{textAlign:'center',padding:'40px 20px',marginTop:'16px'}}>
           <div style={{fontSize:'40px',marginBottom:'12px'}}>🚀</div>
           <div style={{fontFamily:'Playfair Display,serif',fontSize:'18px',fontWeight:700,color:'var(--dark)',marginBottom:'8px'}}>Ready to run your first projection?</div>
-          <div style={{fontSize:'13px',color:'var(--muted)',maxWidth:'360px',margin:'0 auto 20px'}}>Upload a completed tax return PDF and TaxStory will parse it and generate a personalized client video in 90 seconds.</div>
+          <div style={{fontSize:'13px',color:'var(--muted)',maxWidth:'360px',margin:'0 auto 20px'}}>Import a completed tax return PDF (it is read on your device and never uploaded) and TaxStory will generate a personalized client walkthrough in 90 seconds.</div>
           <div style={{display:'flex',gap:'10px',justifyContent:'center'}}>
-            <Link to="/cpa/projections" className="ts-btn ts-btn-primary">📊 CPA Projection</Link>
-            <Link to="/ria/projections" className="ts-btn ts-btn-ghost">📈 RIA Projection</Link>
+            <Link to="/cpa/projections" className="ts-btn ts-btn-primary">📊 Tax Projection</Link>
+            {FEATURES.planningModules && <Link to="/ria/projections" className="ts-btn ts-btn-ghost">📈 Investment Planning</Link>}
           </div>
         </div>
       )}

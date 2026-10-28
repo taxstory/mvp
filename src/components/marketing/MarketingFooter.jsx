@@ -9,10 +9,7 @@ export default function MarketingFooter() {
           {/* Brand */}
           <div className="md:col-span-2">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TS</span>
-              </div>
-              <span className="font-serif font-bold text-xl">TaxStory</span>
+              <img src="/brand/taxstory-lockup-horizontal-primary-on-dark.svg" alt="TaxStory" style={{ height: 36, width: 'auto', display: 'block' }} />
             </div>
             <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
               The first AI-powered video platform for tax professionals. Turn completed returns into personalized client walkthroughs — in 90 seconds.

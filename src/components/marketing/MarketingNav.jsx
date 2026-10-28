@@ -4,10 +4,7 @@ export default function MarketingNav() {
   return (
     <nav className="bg-brand-dark text-white px-6 py-4 flex items-center justify-between">
       <Link to="/" className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg bg-brand-purple flex items-center justify-center">
-          <span className="text-white font-bold text-xs">TS</span>
-        </div>
-        <span className="font-serif font-bold text-lg">TaxStory</span>
+        <img src="/brand/taxstory-lockup-horizontal-primary-on-dark.svg" alt="TaxStory" style={{ height: 32, width: 'auto', display: 'block' }} />
       </Link>
 
       <div className="flex items-center gap-6">

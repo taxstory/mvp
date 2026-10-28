@@ -1,0 +1,57 @@
+/* src/styles/launch.css
+   Pre-launch layer, imported by App.jsx after tokens.css.
+   :root:root (specificity 0,2,0) wins regardless of stylesheet order. */
+
+:root:root {
+  /* Referenced in JSX but never defined in index.css */
+  --green-dark: #065F46;
+  --green-bg:   #D1FAE5;
+  --amber-bg:   #FEF3C7;
+  /* Was #A0A0C0 (~2.5:1 on white). #727290 is ~4.65:1, passes WCAG AA. */
+  --muted-light:       #727290;
+  --color-muted-light: #727290;
+}
+
+/* ── Accessibility ─────────────────────────────────────────── */
+.ts-skip-link {
+  position: absolute; left: -9999px; top: 8px; z-index: 9999;
+  padding: 8px 16px; background: var(--color-purple); color: #fff;
+  border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none;
+}
+.ts-skip-link:focus { left: 8px; }
+
+button:focus-visible, a:focus-visible, [role="button"]:focus-visible,
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--color-purple);
+  outline-offset: 2px;
+}
+
+/* ── Tablet ────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .ts-g3, .ts-g3b, .ts-g4, .ts-g5 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .ts-g2m, .ts-split, .ts-split-wide { grid-template-columns: minmax(0, 1fr) !important; }
+}
+
+/* ── Mobile ────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* AppLayout renders these with inline display:none, hence !important */
+  .ts-hamburger      { display: flex  !important; }
+  .ts-mobile-overlay { display: block !important; }
+
+  .ts-sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 232px; z-index: 200;
+    transform: translateX(-100%); transition: transform .25s ease;
+    box-shadow: 4px 0 24px rgba(0,0,0,.3);
+  }
+  .ts-sidebar--open { transform: translateX(0); }
+
+  .ts-page { padding: 64px 16px 24px; }          /* top clears the hamburger */
+
+  .ts-g2, .ts-g3, .ts-g3b { grid-template-columns: minmax(0, 1fr) !important; }
+  .ts-g4, .ts-g5          { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+  .ts-hrow { flex-direction: column; align-items: stretch; gap: 12px; }
+
+  /* Wide tables scroll sideways instead of clipping */
+  .ts-tbl { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+}

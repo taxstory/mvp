@@ -36,10 +36,7 @@ export default function SignUpPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <div className="p-6">
         <Link to="/" className="flex items-center gap-2 w-fit">
-          <div className="w-7 h-7 rounded-lg bg-brand-purple flex items-center justify-center">
-            <span className="text-white font-bold text-xs">TS</span>
-          </div>
-          <span className="font-serif font-bold text-lg text-brand-dark">TaxStory</span>
+          <img src="/brand/taxstory-lockup-horizontal-primary-on-light.svg" alt="TaxStory" style={{ height: 32, width: 'auto', display: 'block' }} />
         </Link>
       </div>
       <div className="flex-1 flex items-center justify-center px-6 pb-12">
