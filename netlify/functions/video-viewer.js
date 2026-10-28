@@ -50,7 +50,10 @@ async function handleGet(supabase, token) {
   const tr = link.tax_returns || {};
   const audioUrl = await signedUrl(supabase, tr.audio_url, 4 * 3600, { ownerId: link.firm_id });   // refuses paths outside the firm's folder
   const pdfUrl   = await signedUrl(supabase, tr.pdf_summary_url, 3600, { ownerId: link.firm_id });
-  const rawSegs  = tr.script_json || tr.audio_segments || [];
+  const videoUrl = await signedUrl(supabase, tr.video_url, 4 * 3600, { ownerId: link.firm_id });   // was returned as a raw storage path, which no browser can play
+  // The transcript must match what the client HEARS: the narrated segments (with measured durations), not the first draft of the script, which the
+  // advisor may have edited before generating audio, or regenerated since.
+  const rawSegs  = (Array.isArray(tr.audio_segments) && tr.audio_segments.length ? tr.audio_segments : tr.script_json) || [];
   const segments = Array.isArray(rawSegs) ? rawSegs.map(publicSegment) : rawSegs;
   // Only the single headline number is exposed, not the parsed return.
   const rawRefund = link.tax_returns?.parsed_data?.refund_or_owed;
@@ -60,7 +63,7 @@ async function handleGet(supabase, token) {
     ok:          true,
     taxYear:     link.tax_returns?.tax_year,
     audioUrl,
-    videoUrl:    link.tax_returns?.video_url,
+    videoUrl,
     pdfUrl,
     segments,
     firmName:    link.profiles?.firm_name   || 'TaxStory',

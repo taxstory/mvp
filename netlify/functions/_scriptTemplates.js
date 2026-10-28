@@ -15,9 +15,12 @@ const T = {
   ira_distributions:    { text: 'Taxable IRA distributions came to {{ira_distributions}}.',                    anchor: /\bIRA\b|retirement/i,                 ref: 'ira_distributions',  section: 'income' },
   pensions:             { text: 'Taxable pensions and annuities came to {{pensions}}.',                        anchor: /pension|annuit/i,                     ref: 'pensions',           section: 'income' },
   social_security:      { text: 'The taxable part of your Social Security benefits was {{social_security}}.',  anchor: /social security/i,                    ref: 'social_security',    section: 'income' },
-  capital_gains:        { text: 'Your capital gains or losses came to {{capital_gains}}.',                     anchor: /capital|gain|loss|invest/i,           ref: 'capital_gains',      section: 'income' },
-  business_income:      { text: 'Your business income or loss came to {{business_income}}.',                           anchor: /business|self-employ/i,               ref: 'schedule_c',         section: 'income' },
+  capital_gains:        { text: 'Your net capital gains came to {{capital_gains}}.',                                  anchor: /capital|gain|loss|invest/i,           ref: 'capital_gains',      section: 'income' },
+  business_income:      { text: 'Your net business income came to {{business_income}}.',                                 anchor: /business|self-employ/i,               ref: 'schedule_c',         section: 'income' },
   other_income:         { text: 'Additional income reported on Schedule 1 came to {{other_income}}.',           anchor: /additional|other|schedule 1/i,                   ref: 'other_income',       section: 'income' },
+  capital_loss:         { text: 'Your return shows a net capital loss of {{capital_loss}}.',                     anchor: /capital|loss/i,                       ref: 'capital_gains',      section: 'income' },
+  business_loss:        { text: 'Your business had a net loss of {{business_loss}} for the year.',                anchor: /business|loss/i,                      ref: 'schedule_c',         section: 'income' },
+  other_income_loss:    { text: 'Schedule 1 shows a net loss of {{other_income_loss}} in additional income.',     anchor: /additional|other|schedule 1|loss/i,   ref: 'other_income',       section: 'income' },
   total_income:         { text: 'Adding everything up, your total income was {{total_income}}.',               anchor: /total income/i,                       ref: 'total_income',       section: 'income' },
   agi:                  { text: 'After adjustments, your adjusted gross income was {{agi}}.',                  anchor: /adjusted gross|\bAGI\b/i,             ref: 'agi',                section: 'income' },
   standard_deduction:   { text: 'Your standard or itemized deduction was {{standard_deduction}}.',             anchor: /deduction/i,                          ref: 'standard_deduction', section: 'deductions' },
@@ -43,7 +46,8 @@ const SOURCES = {
   wages: 'Line 1z — "Add lines 1a through 1h" (total wages and other earned income)', interest: 'Line 2b — Taxable interest', dividends: 'Line 3b — Ordinary dividends',
   ira_distributions: 'Line 4b — IRA distributions, taxable amount', pensions: 'Line 5b — Pensions and annuities, taxable amount', social_security: 'Line 6b — Social security benefits, taxable amount',
   capital_gains: 'Line 7 (7a on the 2025 form) — Capital gain or (loss)', business_income: 'Schedule 1, line 3 — Business income or (loss) (manual entry only)',
-  other_income: 'Line 8 — Additional income from Schedule 1, line 10', total_income: 'Line 9 — Total income', agi: 'Line 11 (11a on the 2025 form) — Adjusted gross income',
+  other_income: 'Line 8 — Additional income from Schedule 1, line 10', capital_loss: 'Line 7 when negative — Capital (loss), stated as a positive amount', business_loss: 'Schedule 1, line 3 when negative — Business (loss), stated as a positive amount',
+  other_income_loss: 'Line 8 when negative — Additional income (loss) from Schedule 1, stated as a positive amount', total_income: 'Line 9 — Total income', agi: 'Line 11 (11a on the 2025 form) — Adjusted gross income',
   standard_deduction: 'Line 12 (12e on the 2025 form) — Standard deduction or itemized deductions', qbi_deduction: 'Line 13 (13a on the 2025 form) — Qualified business income deduction',
   additional_deductions: '2025 form only, line 13b — Additional deductions from Schedule 1-A', taxable_income: 'Line 15 — Taxable income',
   total_tax: 'Line 24 — Total tax (income tax PLUS other taxes such as self-employment tax — hence "total federal tax", not "income tax")',
@@ -54,7 +58,7 @@ const SOURCES = {
 
 /** The review sheet: every sentence, where its figure comes from, and a column for the reviewing CPA's initials and the tax year reviewed. */
 function renderTemplateReview() {
-  const rows = [['intro', INTRO.text], ...ORDER.map(k => [k, T[k].text]), ['refund', T.refund.text], ['amount_owed', T.amount_owed.text], ['even', T.even.text], ['planning', PLANNING_SEGMENT.text], ['outro', OUTRO.text]];
+  const rows = [['intro', INTRO.text], ...ORDER.map(k => [k, T[k].text]), ...Object.values(LOSS_OF).map(k => [k, T[k].text]), ['refund', T.refund.text], ['amount_owed', T.amount_owed.text], ['even', T.even.text], ['planning', PLANNING_SEGMENT.text], ['outro', OUTRO.text]];
   return `# Narration template review sheet
 
 *Generated from \`netlify/functions/_scriptTemplates.js\` — do not edit by hand (run \`node scripts/generate_template_review.mjs\`). A test fails if this file is out of date.*
@@ -69,6 +73,7 @@ ${rows.map(([k, t]) => `| \`${k}\` | ${t.replace(/\|/g, '\\|')} | ${SOURCES[k]} 
 
 // Core lines are narrated whenever present — INCLUDING when they are zero (a $0 total tax or $0 taxable income is a real, meaningful result).
 // Optional income categories and deductions are narrated only when non-zero (a $0 line adds nothing).
+const LOSS_OF = { capital_gains: 'capital_loss', business_income: 'business_loss', other_income: 'other_income_loss' };
 const CORE = new Set(['total_income', 'agi', 'taxable_income', 'total_tax', 'withholding']);
 const ORDER = ['wages', 'interest', 'dividends', 'ira_distributions', 'pensions', 'social_security', 'capital_gains', 'business_income', 'other_income', 'total_income', 'agi',
                'standard_deduction', 'qbi_deduction', 'additional_deductions', 'taxable_income', 'total_tax', 'withholding', 'estimated_payments', 'effective_rate'];
@@ -80,7 +85,9 @@ function buildBackbone({ facts, result }) {
   for (const key of ORDER) {
     const f = facts[key]; if (!f) continue;
     if (!CORE.has(key) && f.value === 0) continue;
-    const t = T[key]; segs.push({ key, text: t.text, anchor: t.anchor, field_ref: t.ref, section: t.section });
+    const lossKey = LOSS_OF[key];
+    const k = lossKey && f.value < 0 && facts[lossKey] ? lossKey : key;      // a negative gain or income is told as a loss of a positive amount
+    const t = T[k]; segs.push({ key: k, text: t.text, anchor: t.anchor, field_ref: t.ref, section: t.section });
   }
   if (result === 'refund' && facts.refund) segs.push({ key: 'refund', ...pick(T.refund) });
   else if (result === 'owed' && facts.amount_owed) segs.push({ key: 'amount_owed', ...pick(T.amount_owed) });
@@ -114,4 +121,4 @@ function composeScript(backbone, rewrites, model) {
   return { segments: segments.map((s, i) => extractAmounts(s.text).every(a => allowed.has(a) || allowed.has(a.replace(/^-/, ''))) ? s : { ...s, text: substitute(backbone[i].text, model.facts) }), rewritten, rejected };
 }
 
-module.exports = { buildBackbone, composeScript, sameMultiset, renderTemplateReview, SOURCES, TEMPLATE_KEYS: ['intro', ...ORDER, 'refund', 'amount_owed', 'even', 'planning', 'outro'] };
+module.exports = { buildBackbone, composeScript, sameMultiset, renderTemplateReview, SOURCES, TEMPLATE_KEYS: ['intro', ...ORDER, 'capital_loss', 'business_loss', 'other_income_loss', 'refund', 'amount_owed', 'even', 'planning', 'outro'] };

@@ -47,7 +47,7 @@ exports.handler = makeHandler(['OPENAI_API_KEY'], async (event, { supabase, db, 
     await settle(out.ttsCharsBilled);   // the vendor has billed these characters whatever happens next, so reconcile the reservation to reality NOW
     // audio_* are system-managed columns (the database ignores browser writes to them) → service role, scoped to the owner.
     await withRetry('save audio', () => supabase.from('tax_returns')
-      .update({ audio_url: out.audioPath, audio_segments: out.segments, status: 'audio_ready' })
+      .update({ audio_url: out.audioPath, audio_segments: out.segments, status: 'audio_ready', video_url: null })   // a new voiceover makes any earlier video stale
       .eq('id', job.tax_return_id).eq('user_id', user.id));
     await withRetry('mark job succeeded', () => supabase.from('jobs').update({
       status: 'succeeded', progress: 100, finished_at: new Date().toISOString(),

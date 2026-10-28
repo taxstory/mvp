@@ -14,6 +14,8 @@ const GLOSSARY = {
   wages: 'wages, salaries and tips (Form 1040 line 1z)', interest: 'taxable interest (line 2b)', dividends: 'ordinary dividends (line 3b)',
   ira_distributions: 'taxable IRA distributions (line 4b)', pensions: 'taxable pensions and annuities (line 5b)', social_security: 'taxable Social Security benefits (line 6b)',
   capital_gains: 'capital gain or loss (line 7)', business_income: 'business or self-employment profit', other_income: 'additional income from Schedule 1 (line 8)',
+  capital_loss: 'the size of a net capital LOSS on line 7 (always positive; only present when line 7 is negative)', business_loss: 'the size of a net business LOSS (always positive; only present when business income is negative)',
+  other_income_loss: 'the size of a net LOSS in Schedule 1 additional income (always positive; only present when line 8 is negative)',
   total_income: 'total income for the year (line 9) — everything before deductions', agi: 'adjusted gross income (line 11)',
   standard_deduction: 'the standard or itemized deduction taken (line 12)', qbi_deduction: 'qualified business income deduction (line 13)',
   additional_deductions: 'additional deductions from Schedule 1-A (line 13b)', taxable_income: 'taxable income (line 15) — the amount the tax is calculated on',
@@ -38,6 +40,10 @@ function buildFacts(pd, taxYear) {
   put('capital_gains', first(pd.capital_gains, pd.capitalGainLoss), MONEY);
   put('business_income', first(pd.business_income, pd.scheduleC_netProfit), MONEY);
   put('other_income', first(pd.other_income, pd.otherIncome), MONEY);
+  // A negative gain/income is narrated as the size of the LOSS ("a capital loss of $3,000"), never as "came to -$3,000". The positive amount is its own
+  // fact so it is a verified figure for the narration checks.
+  for (const [k, lossKey] of [['capital_gains', 'capital_loss'], ['business_income', 'business_loss'], ['other_income', 'other_income_loss']])
+    if (f[k] && typeof f[k].value === 'number' && f[k].value < 0) put(lossKey, -f[k].value, MONEY);
   put('total_income', first(pd.total_income, pd.totalIncome), MONEY);
   put('agi', first(pd.agi), MONEY);
   put('standard_deduction', first(pd.standard_deduction, pd.standardDeduction), MONEY);

@@ -6,6 +6,7 @@ const { makeHandler, getTaxReturn, getFirmProfile } = require('./_handler');
 const { rateLimit } = require('./_ratelimit');
 const { requireUuid } = require('./_validate');
 const { signedUrl } = require('./_storage');
+const { buildFacts } = require('./_scriptFacts');
 
 exports.config = { timeout: 26 };
 
@@ -38,9 +39,15 @@ exports.handler = makeHandler([], async (event, { supabase, db, user, body }) =>
     audio_url: await signedUrl(supabase, seg.audio_path || seg.audio_url, 7200, { ownerId: user.id }),
   })));
 
+  // The on-screen figures come from the SAME canonical facts the narration was written from, so the number on a slide always equals the number
+  // being spoken. (The renderer used to read parsed_data under its own field names and showed "—" for interest, IRA, pensions, Social Security,
+  // business income, withholding and the refund on many returns.)
+  const model = buildFacts(taxReturn.parsed_data || {}, taxReturn.tax_year);
+  const facts = Object.fromEntries(Object.entries(model.facts).map(([k, v]) => [k, v.value]));
   const compositionProps = {
     segments:   renderSegments,
     parsedData: taxReturn.parsed_data || {},
+    facts,
     year:       taxReturn.tax_year || new Date().getFullYear() - 1,
     firmName:   profile.firm_name  || 'TaxStory',
     firmColor:  profile.brand_color || '#6B5CE7',
