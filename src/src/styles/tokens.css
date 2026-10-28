@@ -1,0 +1,94 @@
+/* src/styles/tokens.css */
+
+:root {
+  /* Brand */
+  --color-purple:      #6B5CE7;
+  --color-purple-2:    #3D2E80;
+  --color-purple-3:    #EEEAFF;
+  --color-purple-4:    #F4F2FF;
+  --color-purple-5:    #AFA9EC;
+  --color-purple-light:#DDD8FF;
+  --color-purple-pale: #B8B0FF;
+  --color-purple-tint: #E8E6F8;
+  --color-purple-wash: #F0EEF8;
+  --color-purple-faint:#F0EEF8;
+  --color-purple-grad: #9D8BFF;
+
+  /* Neutrals */
+  --color-dark:        #1A1230;
+  --color-muted:       #6B698A;
+  --color-muted-light: #A0A0C0;
+  --color-muted-border:#C0BDD8;
+  --color-border:      #E2DFF8;
+  --color-bg:          #F7F6FF;
+  --color-white:       #FFFFFF;
+  --color-soft:        #F9F8FF;
+  --color-soft-white:  #FAFAFE;
+  --color-gray-muted:  #C4C2D8;
+  --color-gray-bg:     #F3F2FA;
+  --color-gray-light:  #F3F4F6;
+
+  /* Greens */
+  --color-green:       #1baf7a;
+  --color-green-mid:   #059669;
+  --color-green-dark:  #065F46;
+  --color-green-bg:    #D1FAE5;
+  --color-green-light: #F0FDF4;
+  --color-green-pale:  #BBF7D0;
+  --color-green-very:  #BBF7D0;
+  --color-green-check: #A7F3D0;
+  --color-mint:        #5DCAA5;
+  --color-mint-light:  #E1F5EE;
+  --color-green-mint:  #9FE1CB;
+  --color-green-deep:  #0F6E56;
+  --color-green-vivid: #22C55E;
+
+  /* Ambers */
+  --color-amber:       #D97706;
+  --color-amber-mid:   #FCD34D;
+  --color-amber-vivid: #F59E0B;
+  --color-amber-bg:    #FEF3C7;
+  --color-amber-light: #FEF3C7;
+  --color-amber-pale:  #FFF9E6;
+  --color-amber-dark:  #92400E;
+  --color-amber-border:#FDE68A;
+  --color-yellow:      #FFD60A;
+
+  /* Reds */
+  --color-red:         #E24B4A;
+  --color-red-mid:     #DC2626;
+  --color-red-vivid:   #EF4444;
+  --color-red-bg:      #FEE2E2;
+  --color-red-light:   #FEE2E2;
+  --color-red-soft:    #F09595;
+  --color-red-dark:    #991B1B;
+  --color-red-border:  #FECACA;
+
+  /* Blues */
+  --color-blue:        #1E40AF;
+  --color-blue-mid:    #2563EB;
+  --color-blue-bg:     #EFF6FF;
+  --color-blue-border: #BFDBFE;
+  --color-blue-pale:   #F0F4FF;
+  --color-blue-light:  #DBEAFE;
+  --color-blue-mid-bg: #C4BEF8;
+  --color-blue-tab:    #BFDBFE;
+  --color-blue-btn:    #C4C2D8;
+  --color-teal:        #0891B2;
+  --color-violet:      #7C3AED;
+
+  /* Typography */
+  --font-sans:  'Inter', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-mono:  'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Radius */
+  --radius-sm:  7px;
+  --radius-md:  10px;
+  --radius-lg:  13px;
+  --radius-xl:  16px;
+  --radius-2xl: 20px;
+
+  /* Layout */
+  --sidebar-width: 226px;
+}
