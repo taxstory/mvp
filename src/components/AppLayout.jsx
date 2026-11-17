@@ -3,7 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { FEATURES } from '../config/features';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { clearAllDrafts } from '../utils/drafts';
 import { useAuth } from '../context/AuthContext';
 import { useSubscription } from '../hooks/useSubscription';
 import { supabase } from '../lib/supabase';
@@ -47,7 +48,15 @@ const PLAN_LABELS = {
 };
 
 export default function AppLayout() {
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [signingOut, setSigningOut] = useState(false);
+  // Always visible in the sidebar footer (it used to exist only on the Settings page). Drafts are wiped and the session ended before leaving.
+  async function handleSignOut() {
+    setSigningOut(true);
+    clearAllDrafts();
+    try { await signOut(); } finally { navigate('/login', { replace: true }); }
+  }
   const { isActive, tier, loading: subLoading } = useSubscription();
   const [unreadCount,  setUnreadCount]  = useState(0);
   const [clientCount,  setClientCount]  = useState(0);
@@ -165,13 +174,22 @@ export default function AppLayout() {
 
       <div className="ts-sidebar-footer">
             <div className="ts-user-av" aria-hidden="true">{initials}</div>
-            <div>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <div className="ts-user-name">{profile?.firm_name?.split(' ')[0] || 'User'}</div>
               <div className="ts-user-firm">
                 <span className="ts-status-dot" aria-hidden="true" style={!isPaid ? { background: 'var(--amber)' } : undefined} />
                 {statusText} · {profile?.firm_name || 'TaxStory'}
               </div>
             </div>
+            <button onClick={handleSignOut} disabled={signingOut} title="Sign out" aria-label="Sign out"
+              style={{ marginLeft: 'auto', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px',
+                background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.18)', borderRadius: 8,
+                color: '#fff', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: signingOut ? 'default' : 'pointer', opacity: signingOut ? .6 : 1 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" />
+              </svg>
+              {signingOut ? 'Signing out…' : 'Sign out'}
+            </button>
           </div>
         </aside>
 

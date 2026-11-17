@@ -45,7 +45,15 @@ const FIELD_LABELS = {
   other_income:      'Other Income (Line 8)',
   total_income:      'Total Income (Line 9)',
   agi:               'Adjusted Gross Income (Line 11)',
-  standard_deduction:'Standard Deduction (Line 12)',
+  standard_deduction:'Deduction (Line 12)',
+  child_tax_credit:'Dependent Credits (Line 19)',
+  other_credits:'Other Credits (Line 20)',
+  earned_income_credit:'Earned Income Credit (Line 27)',
+  additional_child_tax_credit:'Refundable Child Credit (Line 28)',
+  base_tax:'Estimated Tax — Current Plan',
+  scenario_tax:'Estimated Tax — This Option',
+  tax_difference:'Difference in Federal Tax',
+  scenario_rate:'Estimated Tax Rate',          // standard OR itemized — the narration says which
   qbi_deduction:     'QBI Deduction (Line 13)',
   taxable_income:    'Taxable Income (Line 15)',
   total_tax:         'Total Tax (Line 24)',
@@ -239,6 +247,14 @@ function renderFrame(canvas, seg, parsedData, firmName, firmColor, year, subtitl
       schedule_c:        fmt(pd.business_income),
       other_income:      fmt(pd.other_income),
       qbi_deduction:     fmt(pd.qbi_deduction),
+      child_tax_credit:  fmt(pd.child_tax_credit),
+      other_credits:     fmt(pd.other_credits),
+      earned_income_credit: fmt(pd.earned_income_credit),
+      additional_child_tax_credit: fmt(pd.additional_child_tax_credit),
+      base_tax:          fmt(pd.base_tax),
+      scenario_tax:      fmt(pd.scenario_tax),
+      tax_difference:    fmt(pd.tax_difference),
+      scenario_rate:     pd.scenario_rate != null ? `${pd.base_rate}% → ${pd.scenario_rate}%` : '—',
       effective_rate:    pd.effective_rate != null ? `${Number(pd.effective_rate).toFixed(1)}%` : '—',
     };
     const mainValue = fieldValues[seg.field_ref] || '';
@@ -396,13 +412,15 @@ async function encodeWithMediaRecorder(canvas, segments, audio, draw, onProgress
 /** Map the server's canonical facts (generate-video → compositionProps.facts, the same figures the narration uses) onto the names renderFrame reads. */
 function factsToFrameData(f, fallback) {
   if (!f || typeof f !== 'object' || !Object.keys(f).length) return fallback || {};
+  if (f.scenario) return { base_tax: f.base_tax, scenario_tax: f.scenario_tax, tax_difference: f.tax_difference, base_rate: f.base_rate, scenario_rate: f.scenario_rate,
+    federal_tax: f.scenario_tax, effective_rate: f.scenario_rate };          // planning comparison: the KPI panel shows the chosen option
   const net = f.refund != null ? f.refund : f.amount_owed != null ? -f.amount_owed : undefined;
   return {
     wages: f.wages, taxable_interest: f.interest, ordinary_dividends: f.dividends, ira_distributions: f.ira_distributions, pensions: f.pensions,
     social_security: f.social_security, capital_gains: f.capital_gains, business_income: f.business_income, other_income: f.other_income,
     total_income: f.total_income, agi: f.agi, standard_deduction: f.standard_deduction, qbi_deduction: f.qbi_deduction, taxable_income: f.taxable_income,
     federal_tax: f.total_tax, federal_withholding: f.withholding, refund: f.refund, amount_owed: f.amount_owed,
-    effective_rate: f.effective_rate, refund_or_owed: net,
+    effective_rate: f.effective_rate, refund_or_owed: net, child_tax_credit: f.child_tax_credit, other_credits: f.other_credits, earned_income_credit: f.earned_income_credit, additional_child_tax_credit: f.additional_child_tax_credit,
   };
 }
 
