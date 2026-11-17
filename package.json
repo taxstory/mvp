@@ -1,43 +1,11 @@
 {
-  "name": "taxstory",
-  "private": true,
-  "version": "0.1.0",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "test": "node tests/engine/run.mjs",
-    "test:engine": "node tests/engine/run.mjs",
-    "test:ui": "vitest run",
-    "security:guard": "node scripts/check-deprecated-endpoints.cjs",
-    "test:security": "node --test tests/security/*.test.cjs",
-    "test:parser": "node --test tests/parser/*.test.mjs",
-    "calibrate": "node scripts/calibrate-returns.mjs"
-  },
+  "name": "taxstory-functions",
+  "version": "1.0.0",
+  "description": "TaxStory Netlify serverless functions",
   "dependencies": {
-    "@sentry/react": "10.76.2",
-    "@supabase/supabase-js": "^2.45.0",
-    "mediabunny": "1.61.4",
-    "pdfjs-dist": "^6.4.299",
-    "posthog-js": "1.438.9",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.28.0",
-    "remotion": "^4.0.250"
-  },
-  "devDependencies": {
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/react": "^16.0.1",
-    "@vitejs/plugin-react": "^4.3.3",
-    "autoprefixer": "^10.4.20",
-    "axe-core": "^4.14.0",
-    "jsdom": "^25.0.1",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.14",
-    "vite": "^5.4.10",
-    "vitest": "^2.1.4"
-  },
-  "engines": {
-    "node": ">=20"
+    "@supabase/supabase-js": "^2.39.0",
+    "resend": "^2.0.0",
+    "stripe": "^14.0.0",
+    "pdfkit": "^0.14.0"
   }
 }
