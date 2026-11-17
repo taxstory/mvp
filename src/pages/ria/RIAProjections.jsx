@@ -3,6 +3,7 @@ import { saveDraft } from '../../utils/drafts';
 import { calcFullFederalTax, calcRMD, getBracketHeadroom, getMarginalRate, taxOptionsFor } from '../../utils/taxEngine';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { identifierError } from '../../utils/pii';
 
 // projectYears: uses taxEngine.js — accurate NIIT, AMT, SE tax, all year params
 function projectYears(form, years) {
@@ -439,13 +440,17 @@ export default function RIAProjections() {
 function RIANoteEditor({ projId, initialNotes }) {
   const [notes, setNotes] = useState(initialNotes);
   const [saved, setSaved]   = useState(false);
+  const [err, setErr]       = useState('');
   async function save() {
-    await supabase.from('ria_projections').update({ notes }).eq('id', projId);
-    setSaved(true); setTimeout(() => setSaved(false), 2000);
+    const bad = identifierError(notes, 'Notes'); if (bad) { setErr(bad); return; }
+    const { error } = await supabase.from('ria_projections').update({ notes }).eq('id', projId);
+    if (error) { setErr(`Could not save notes: ${error.message}`); return; }
+    setErr(''); setSaved(true); setTimeout(() => setSaved(false), 2000);
   }
   return (
     <>
       <textarea value={notes} onChange={e=>{setNotes(e.target.value);setSaved(false);}} style={{height:'100px',resize:'none'}} placeholder="Add scenario notes…" />
+      {err && <div style={{color:'var(--color-red-dark)',fontSize:12,marginTop:6}}>{err}</div>}
       <button className="ts-btn ts-btn-secondary ts-btn-sm" style={{marginTop:'10px'}} onClick={save}>{saved?'Saved ✓':'Save notes'}</button>
     </>
   );
