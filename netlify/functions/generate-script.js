@@ -8,7 +8,9 @@
 const { makeHandler, getTaxReturn, audit } = require('./_handler');
 const { rateLimit, globalDailyCap } = require('./_ratelimit');
 const { requireUuid } = require('./_validate');
-const { buildFacts } = require('./_scriptFacts');
+const { buildFacts, addPriorYear } = require('./_scriptFacts');
+const { priorYearFigures } = require('./_priorYear');
+const { readScenarioRequest, composeScenarioScript } = require('./_scenarioScript');
 const { buildBackbone, composeScript } = require('./_scriptTemplates');
 const { reserveBudget, settleCall, releaseReservation, estimateAnthropicCost } = require('./_spend');
 const { randomUUID } = require('crypto');
@@ -50,9 +52,21 @@ exports.handler = makeHandler([], async (event, { supabase, db, user, body }) =>
   await rateLimit(supabase, `generate-script:${user.id}`, 60, 3600, 'Too many scripts requested this hour. Please wait a few minutes.');
   await globalDailyCap(supabase, 'script', 'GLOBAL_DAILY_SCRIPTS', 2000);
 
-  const taxReturn = await getTaxReturn(db, taxReturnId, user.id, 'id, user_id, parsed_data, tax_year');   // never client names
+  const taxReturn = await getTaxReturn(db, taxReturnId, user.id, 'id, user_id, client_id, parsed_data, tax_year');   // never client names
   if (!taxReturn.parsed_data) throw Object.assign(new Error('Return has not been parsed yet'), { statusCode: 400 });
-  const model = buildFacts(taxReturn.parsed_data, taxReturn.tax_year);
+
+  // ── Planning scenario comparison: fixed sentences, figures are the advisor's estimates (approval required at the audio step) ──
+  if (Array.isArray(taxReturn.parsed_data.scenarios)) {
+    const req = readScenarioRequest(body, taxReturn.parsed_data);
+    const segments = composeScenarioScript(req);
+    const scriptText = segments.map(s => s.text).join(' ');
+    const parsed = { ...taxReturn.parsed_data, walkthrough: { baseIndex: req.baseIndex, chosenIndex: req.chosenIndex, figures: req.figures } };   // for the video slides and the record
+    const { error } = await supabase.from('tax_returns').update({ script: scriptText, script_json: segments, parsed_data: parsed }).eq('id', taxReturnId).eq('user_id', user.id);
+    if (error) throw new Error(`Could not save the script: ${error.message}`);
+    await audit(supabase, user.id, 'script_generated', `Scenario comparison script for ${taxReturnId} (${segments.length} sentences; estimates, approval required).`);
+    return { statusCode: 200, body: JSON.stringify({ success: true, verified: false, scenario: true, ai_used: false, warnings: ['Scenario figures are estimates: you will be asked to approve them before audio is generated.'], script: scriptText, segments }) };
+  }
+  const model = addPriorYear(buildFacts(taxReturn.parsed_data, taxReturn.tax_year), await priorYearFigures(db, taxReturn));   // + last year's outcome, if on file
   if (Object.keys(model.facts).length < 3) throw Object.assign(new Error('There are not enough figures on this return to write a walkthrough.'), { statusCode: 400 });
 
   const backbone = buildBackbone(model);

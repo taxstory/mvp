@@ -42,8 +42,11 @@ exports.handler = makeHandler([], async (event, { supabase, db, user, body }) =>
   // The on-screen figures come from the SAME canonical facts the narration was written from, so the number on a slide always equals the number
   // being spoken. (The renderer used to read parsed_data under its own field names and showed "—" for interest, IRA, pensions, Social Security,
   // business income, withholding and the refund on many returns.)
-  const model = buildFacts(taxReturn.parsed_data || {}, taxReturn.tax_year);
-  const facts = Object.fromEntries(Object.entries(model.facts).map(([k, v]) => [k, v.value]));
+  const isScenario = Array.isArray(taxReturn.parsed_data?.scenarios);
+  const model = buildFacts(isScenario ? {} : (taxReturn.parsed_data || {}), taxReturn.tax_year);
+  const facts = isScenario
+    ? { ...(taxReturn.parsed_data.walkthrough?.figures || {}), scenario: true }                 // the comparison's figures for the slides
+    : Object.fromEntries(Object.entries(model.facts).map(([k, v]) => [k, v.value]));
   const compositionProps = {
     segments:   renderSegments,
     parsedData: taxReturn.parsed_data || {},

@@ -2,6 +2,7 @@
 // Creates a tokenized share link for a completed walkthrough.
 // Optionally sends a branded delivery email to the client via Resend.
 
+const { assertNoIdentifier } = require('./_pii');
 const { makeHandler, getFirmProfile } = require('./_handler');
 const { escapeHtml, clip, safeColor, safeHttpsUrl, headerText, isEmail } = require('./_html');
 const { requireSiteOrigin } = require('./_site');
@@ -19,6 +20,8 @@ exports.handler = makeHandler([], async (event, { supabase, db, user, body }) =>
   // Every option is bounded/allow-listed rather than trusted: values are stored, emailed and used in date arithmetic.
   const sendEmail = body.sendEmail === true;
   const label     = typeof body.label === 'string' ? body.label.trim().slice(0, 100) : undefined;
+  if (label) assertNoIdentifier(label, 'Link label');                               // stored, and shown on the client's page
+  if (typeof clientName === 'string') assertNoIdentifier(clientName, 'Client name');   // put in the email
   const deliveryMethod = ['copied', 'email', 'other'].includes(body.deliveryMethod) ? body.deliveryMethod : 'copied';
   const expiryDays = body.expiryDays == null ? null : Number(body.expiryDays);
   if (expiryDays !== null && (!Number.isInteger(expiryDays) || expiryDays < 1 || expiryDays > 365)) {

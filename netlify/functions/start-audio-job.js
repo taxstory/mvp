@@ -11,13 +11,15 @@
 const { makeHandler, getTaxReturn, TIER_LIMITS, effectiveTier } = require('./_handler');
 const { rateLimit, globalDailyCap } = require('./_ratelimit');
 const { requireUuid, validateNarration, bad } = require('./_validate');
-const { buildFacts, unverifiedAmounts } = require('./_scriptFacts');
+const { buildFacts, unverifiedAmounts, addPriorYear } = require('./_scriptFacts');
+const { priorYearFigures } = require('./_priorYear');
 const { assertNoIdentifier } = require('./_pii');
 const { estimateTtsCost, limits } = require('./_spend');
 const { createHash } = require('crypto');
 
 exports.config = { timeout: 26 };
 const KINDS = ['estimate_or_projection', 'correction', 'other'];
+const TEMPLATE_TEXT = require('./_scriptTemplates').renderTemplateReview();   // every standard sentence, for the client-label check
 
 exports.handler = makeHandler([], async (event, { supabase, db, user, body }) => {
   const { taxReturnId } = body;
@@ -27,10 +29,29 @@ exports.handler = makeHandler([], async (event, { supabase, db, user, body }) =>
   const requestKey = body.requestKey == null ? null : String(body.requestKey);
   if (requestKey !== null && !/^[A-Za-z0-9_-]{8,100}$/.test(requestKey)) throw bad('Invalid requestKey');
 
-  const ret = await getTaxReturn(db, taxReturnId, user.id, 'id, user_id, parsed_data, tax_year');       // ownership enforced by RLS and re-checked here
+  const ret = await getTaxReturn(db, taxReturnId, user.id, 'id, user_id, client_id, parsed_data, tax_year');   // ownership enforced by RLS and re-checked here
+
+  // The client's label must not be read aloud: narration goes to the voice vendor, is stored, and is shown as the transcript. (Templates never
+  // include it; this catches an advisor typing it into an edited scene.) Labels shorter than 3 characters (initials) are not checked.
+  if (ret.client_id) {
+    const { data: client } = await db.from('clients').select('name').eq('id', ret.client_id).maybeSingle();
+    const label = (client?.name || '').trim();
+    if (label.length >= 3) {
+      const esc = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re  = new RegExp(`(^|[^A-Za-z])${esc}([^A-Za-z]|$)`, 'i');
+      // A label that is an ordinary word of the standard narration ("Tax", "Income") cannot be told apart from it, so it is not checked.
+      if (!re.test(TEMPLATE_TEXT)) {
+        const hit = scenes.findIndex(sc => re.test(sc.text));
+        if (hit >= 0) throw bad(`Scene ${hit + 1} mentions the client by name. Walkthroughs are narrated without names — please remove it.`);
+      }
+    }
+  }
 
   // Amounts not on the return need a recorded, specific approval.
-  const unverified = unverifiedAmounts(scenes.map(s => s.text), buildFacts(ret.parsed_data, ret.tax_year));
+  // A planning-scenario comparison has no return figures to verify against: every amount in it is an estimate and must be approved.
+  const isScenario = Array.isArray(ret.parsed_data?.scenarios);
+  const unverified = unverifiedAmounts(scenes.map(s => s.text),
+    isScenario ? buildFacts({}, ret.tax_year) : addPriorYear(buildFacts(ret.parsed_data, ret.tax_year), await priorYearFigures(db, ret)));
   let approval = null;
   if (unverified.length) {
     const want = [...unverified].sort(), given = Array.isArray(body.approval?.amounts) ? body.approval.amounts.map(String).sort() : null;

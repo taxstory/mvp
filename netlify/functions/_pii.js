@@ -3,9 +3,11 @@
 // browser and only validated numbers are sent); this is the backstop for free-text fields (notes, names, messages).
 const SSN_RE = /(?<![0-9])[0-9]{3}[- ][0-9]{2}[- ][0-9]{4}(?![0-9])/g;   // SSN/ITIN with separators
 const EIN_RE = /(?<![0-9])[0-9]{2}-[0-9]{7}(?![0-9])/g;                    // EIN
+// Nine digits with no separators (how SSNs are usually typed). Not when it is part of a longer number, a decimal, or a dollar/comma amount.
+const BARE9_RE = /(?<![0-9$,.])[0-9]{9}(?![0-9,.])/g;
 
-const looksLikeIdentifier = (t) => typeof t === 'string' && (new RegExp(SSN_RE.source).test(t) || new RegExp(EIN_RE.source).test(t));
-const redactIdentifiers   = (t) => String(t ?? '').replace(SSN_RE, '[removed]').replace(EIN_RE, '[removed]');
+const looksLikeIdentifier = (t) => typeof t === 'string' && (new RegExp(SSN_RE.source).test(t) || new RegExp(EIN_RE.source).test(t) || new RegExp(BARE9_RE.source).test(t));
+const redactIdentifiers   = (t) => String(t ?? '').replace(SSN_RE, '[removed]').replace(EIN_RE, '[removed]').replace(BARE9_RE, '[removed]');
 
 /** Throw 400 if a user-supplied free-text value looks like an SSN/EIN. */
 function assertNoIdentifier(value, fieldLabel) {

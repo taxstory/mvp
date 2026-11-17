@@ -36,6 +36,14 @@ exports.handler = async (event) => {
       }
       if (checked > MAX_FOLDERS) break;
     }
+    // Retention for client contact data (only stored when a firm turns labels-only mode off): a recipient address is kept 90 days after its
+    // share link expires, and on a message for 90 days, then cleared. The link, the message text and the view history stay.
+    const RETAIN_DAYS = Number(process.env.CONTACT_RETENTION_DAYS || 90);
+    const cutoff = new Date(Date.now() - RETAIN_DAYS * 86400000).toISOString();
+    const r1 = await supabase.from('video_share_links').update({ sent_to: null }).not('sent_to', 'is', null).lt('expires_at', cutoff);
+    const r2 = await supabase.from('messages').update({ sent_to: null }).not('sent_to', 'is', null).lt('created_at', cutoff);
+    const r3 = await supabase.from('video_view_notifications').update({ sent_to: null }).not('sent_to', 'is', null).lt('created_at', cutoff);
+    for (const [k, r] of [['share_links', r1], ['messages', r2], ['view_notifications', r3]]) if (r.error) logError(`contact-retention:${k}`, r.error);
     return { statusCode: 200, body: JSON.stringify({ checked, orphanFolders, removedFiles }) };
   } catch (err) {
     if (err.statusCode === 429 || err.statusCode === 503) return { statusCode: err.statusCode, body: JSON.stringify({ error: 'Busy' }) };

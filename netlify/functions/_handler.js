@@ -201,8 +201,13 @@ async function refundUsage(supabase, userId, kind, jobId) {
 }
 
 /** Write to audit_log — fire-and-forget, never throws */
+// Best effort and never throws. (It used `.insert(...).catch(...)`, but Supabase query builders have no .catch method: every call threw a
+// TypeError AFTER the endpoint's real work was done, so successful saves, deletions and shares answered with an error.)
 async function audit(supabase, userId, action, description) {
-  return supabase.from('audit_log').insert({ user_id: userId, action, description }).catch(() => {});
+  try {
+    const { error } = await supabase.from('audit_log').insert({ user_id: userId, action, description });
+    if (error) console.error('[audit] insert failed:', error.message);
+  } catch (e) { console.error('[audit] insert failed:', e.message); }
 }
 
 module.exports = { makeHandler, json, getTaxReturn, getFirmProfile, TIER_LIMITS, effectiveTier, reserveUsage, refundUsage, audit, CORS_HEADERS, buildCorsHeaders };

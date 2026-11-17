@@ -27,17 +27,24 @@ const PDF_KEYS = new Set([
   'totalIncome','adjustmentsToIncome','agi','standardDeduction','itemizedDeductions','qbiDeduction',
   'taxableIncome','additionalDeductions','regularTax','alternativeMinTax','selfEmploymentTax','totalTax','totalPayments',
   'federalWithheld','estimatedTaxPayments','refund','amountOwed','effectiveRate','marginalRate',
-  'numberOfDependents',
+  'numberOfDependents','childTaxCredit','otherCredits','earnedIncomeCredit','additionalChildTaxCredit','netSTCG','netLTCG',
 ]);
 // Fields the manual-entry form produces (snake_case) — includes computed results and boolean planning flags.
 const MANUAL_KEYS = new Set([
   'filing_status','wages','business_income','capital_gains','tip_income','overtime_income','other_income','total_income','agi',
   'standard_deduction','senior_deduction','qbi_deduction','taxable_income','federal_tax','se_tax','niit','amt_liability',
   'effective_rate','marginal_rate','bracket_headroom','withholding','refund_or_owed','tax_year','flags',
+  // the remaining entry-form inputs (kept so the projection and narration see the whole return)
+  'spouse_wages','partnership_k','interest','ordinary_dividends','qualified_dividends','ltcg','stcg','rental_income','pensions','social_security',
+  'taxable_social_security','children','other_dependents','eic_children','eic','actc','cap_loss_carry_st','cap_loss_carry_lt','aged','deduction_type','itemized_amount','salt_income','property_tax','mortgage','charity','medical','se_health_insurance',
+  'estimated_payments','is_sstb','w2_wages_paid','qual_prop_basis',
 ]);
+const BOOL_KEYS = new Set(['aged', 'is_sstb']);
+const ENUMS     = { deduction_type: ['standard', 'itemized'] };
 const STATUS_KEYS = new Set(['filingStatus', 'filing_status']);
 const YEAR_KEYS   = new Set(['taxYear', 'tax_year']);
-const COUNT_KEYS  = new Set(['numberOfDependents']);
+const MANUAL_YEARS = [2024, 2025, 2026];
+const COUNT_KEYS  = new Set(['numberOfDependents', 'children', 'other_dependents', 'eic_children']);
 const RATE_KEYS   = new Set(['effectiveRate', 'marginalRate', 'effective_rate', 'marginal_rate']);
 const MAX_AMOUNT  = 1e11;
 
@@ -52,6 +59,12 @@ function validateFigures(figures, allowed) {
     if (STATUS_KEYS.has(k)) {
       if (typeof v !== 'string' || !/^[A-Za-z][A-Za-z ,'\-]{1,39}$/.test(v)) throw bad('Invalid filing status');
       out[k] = v.trim();
+    } else if (BOOL_KEYS && BOOL_KEYS.has(k)) {
+      if (typeof v !== 'boolean') throw bad('Invalid yes/no field');
+      out[k] = v;
+    } else if (ENUMS && ENUMS[k]) {
+      if (!ENUMS[k].includes(v)) throw bad('Invalid choice');
+      out[k] = v;
     } else if (k === 'flags') {
       if (!v || typeof v !== 'object' || Array.isArray(v) || Object.keys(v).length > 40) throw bad('Invalid flags');
       out.flags = {};
@@ -122,6 +135,9 @@ exports.handler = makeHandler([], async (event, { supabase, db, user, body }) =>
     taxYear = figures.taxYear ?? figures.tax_year ?? null;
     if (body.taxYear !== undefined && (!Number.isInteger(body.taxYear) || body.taxYear < 2015 || body.taxYear > new Date().getFullYear() + 1)) throw bad('Invalid tax year');
     taxYear = body.taxYear ?? taxYear;
+    // A manual entry is calculated by the tax engine, which has official tables only for these years (keep in sync with
+    // SUPPORTED_TAX_YEARS in src/utils/taxEngine.js — tests/engine/run.mjs checks it). An imported PDF carries its own figures, so any year is accepted.
+    if (source === 'manual' && !MANUAL_YEARS.includes(Number(taxYear))) throw bad(`Manual entry supports tax years ${MANUAL_YEARS.join(', ')}. For another year, import the return PDF instead.`);
     clientId = await resolveClient(db, user, body);
     label = source === 'manual' ? 'Manual projection' : 'Tax return';
   }

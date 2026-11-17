@@ -18,6 +18,7 @@ const { safeWebUrl } = require('./_validate');
 const { requireSiteOrigin } = require('./_site');
 const { rateLimit, clientIp } = require('./_ratelimit');
 const { signedUrl } = require('./_storage');
+const { buildFacts } = require('./_scriptFacts');
 const crypto = require('crypto');
 
 exports.config = { timeout: 26 };
@@ -56,12 +57,12 @@ exports.handler = async (event) => {
         const { data: { user: fu } = {} } = await supabase.auth.admin.getUserById(client.user_id).catch(() => ({ data: {} }));
         return json(410, { error: 'This link has expired. Please contact your advisor for a new one.', firmName: fp?.firm_name || null, advisorEmail: fu?.email || null, advisorPhone: fp?.phone || null });
       }
-      await supabase.rpc('touch_portal', { p_client: client.id }).catch(() => {});   // access history for the advisor (best effort)
+      try { await supabase.rpc('touch_portal', { p_client: client.id }); } catch { /* access history for the advisor (best effort); .catch() on a query builder threw and broke the portal */ }
 
       // Fetch all walkthroughs for this client — most recent first
       const { data: returns } = await supabase
         .from('tax_returns')
-        .select('id, tax_year, file_name, status, created_at, audio_url, video_url, pdf_summary_url')
+        .select('id, tax_year, file_name, status, created_at, audio_url, video_url, pdf_summary_url, parsed_data')
         .eq('client_id', client.id)
         .eq('status', 'audio_ready')  // only show completed walkthroughs to clients
         .order('tax_year', { ascending: false });
@@ -80,10 +81,19 @@ exports.handler = async (event) => {
         tokenByReturnId[sl.tax_return_id] = sl.token;
       }
 
+      // Year-over-year: each filed return's headline outcome (from the SAME canonical figures the narration used), so the client sees their
+      // tax story across years. Planning scenarios are labelled as such and carry no outcome. Only these few totals leave the server.
+      const outcome = r => {
+        if (Array.isArray(r.parsed_data?.scenarios)) return { kind: 'scenario' };
+        const f = buildFacts(r.parsed_data || {}, r.tax_year).facts;
+        const v = k => (typeof f[k]?.value === 'number' ? f[k].value : null);
+        return { kind: 'return', refund: v('refund'), owed: v('amount_owed'), totalTax: v('total_tax'), agi: v('agi') };
+      };
       const walkthroughs = await Promise.all((returns || []).map(async r => ({
         id:          r.id,
         taxYear:     r.tax_year,
         status:      r.status,
+        ...outcome(r),
         hasVideo:    !!r.audio_url || !!r.video_url,
         pdfUrl:      await signedUrl(supabase, r.pdf_summary_url, 3600, { ownerId: client.user_id }),   // short-lived; bucket is private
         viewerToken: tokenByReturnId[r.id] || null,

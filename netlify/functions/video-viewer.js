@@ -42,7 +42,8 @@ async function handleGet(supabase, token) {
   }
 
   // Record link_opened (idempotent — viewer page may load multiple times)
-  await supabase.rpc('record_view_event', { p_token: token, p_event_type: 'link_opened' }).catch(() => {});
+  // Best effort. (Was `.rpc(...).catch(...)`: query builders have no .catch, so this threw and EVERY share link failed to open.)
+  try { await supabase.rpc('record_view_event', { p_token: token, p_event_type: 'link_opened' }); } catch { /* tracking is optional */ }
 
   const advisor = await contact();
   // Signed ONLY now, after the token has been validated. Short-lived so a leaked URL stops working;

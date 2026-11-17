@@ -10,6 +10,10 @@ function requireUuid(v, name) { if (!isUuid(v)) throw bad(`Invalid ${name}`); re
 const LIMITS = { maxSegments: 20, maxSegmentChars: 1200, maxTotalChars: 9000, maxScriptChars: 20000 };
 
 /** Validate narration input for text-to-speech (cost control). Returns { segments|null, script|null }. */
+// Contact details in narration: an email address, or a phone number with area code (separators required, so amounts and years never match).
+const looksLikeContact = (t) => typeof t === 'string' &&
+  (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(t) || /(?<![0-9$])(\+?1[ .-]?)?\(?[2-9][0-9]{2}\)?[ .-][0-9]{3}[ .-][0-9]{4}(?![0-9])/.test(t));
+
 function validateNarration({ segments, script }) {
   if (segments !== undefined && segments !== null) {
     if (!Array.isArray(segments) || segments.length < 1) throw bad('segments must be a non-empty array');
@@ -25,12 +29,22 @@ function validateNarration({ segments, script }) {
     if (total > LIMITS.maxTotalChars) throw bad(`Narration is too long (maximum ${LIMITS.maxTotalChars} characters in total)`);
     // Narration is sent to the voice vendor. The advisor can edit it freely, so an SSN/EIN pasted into a scene is refused here.
     if (segments.some(x => looksLikeIdentifier(x.text))) throw bad('A scene contains something that looks like a Social Security or tax ID number. Please remove it — narration should only describe the figures.');
-    // client-supplied storage fields must never survive into stored rows; the server writes them
-    segments = segments.map(({ audio_url, audio_path, ...rest }) => rest);   // eslint-disable-line no-unused-vars
+    // Email addresses and phone numbers are refused too: narration goes to the voice vendor and is stored with the job and the return.
+    const contactIdx = segments.findIndex(x => looksLikeContact(x.text));
+    if (contactIdx >= 0) throw bad(`Scene ${contactIdx + 1} contains an email address or phone number. Narration should only describe the return — please remove it.`);
+    // Only known scene fields survive into stored rows (jobs.payload, tax_returns.audio_segments). Anything else the browser sends — including
+    // storage fields the server writes itself — is dropped, so no free text can ride along outside `text`.
+    segments = segments.map(s => ({
+      text:      s.text.trim(),
+      field_ref: typeof s.field_ref === 'string' && /^[a-z_]{1,40}$/.test(s.field_ref) ? s.field_ref : null,
+      section:   typeof s.section   === 'string' && /^[a-z_]{1,30}$/.test(s.section)   ? s.section   : null,
+      key:       typeof s.key       === 'string' && /^[a-z_]{1,40}$/.test(s.key)       ? s.key       : null,
+    }));
   } else segments = null;
   if (script !== undefined && script !== null) {
     if (typeof script !== 'string' || script.length > LIMITS.maxScriptChars) throw bad(`script must be text of at most ${LIMITS.maxScriptChars} characters`);
     if (looksLikeIdentifier(script)) throw bad('The script contains something that looks like a Social Security or tax ID number. Please remove it.');
+    if (looksLikeContact(script)) throw bad('The script contains an email address or phone number. Please remove it.');
   } else script = null;
   if (!segments && !script) throw bad('Missing segments or script');
   return { segments, script };

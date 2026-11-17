@@ -17,7 +17,9 @@ const GLOSSARY = {
   capital_loss: 'the size of a net capital LOSS on line 7 (always positive; only present when line 7 is negative)', business_loss: 'the size of a net business LOSS (always positive; only present when business income is negative)',
   other_income_loss: 'the size of a net LOSS in Schedule 1 additional income (always positive; only present when line 8 is negative)',
   total_income: 'total income for the year (line 9) — everything before deductions', agi: 'adjusted gross income (line 11)',
-  standard_deduction: 'the standard or itemized deduction taken (line 12)', qbi_deduction: 'qualified business income deduction (line 13)',
+  child_tax_credit: 'child tax credit and credit for other dependents (line 19)', other_credits: 'other nonrefundable credits from Schedule 3 (line 20)', earned_income_credit: 'the earned income credit (line 27), a refundable credit paid even beyond the tax', additional_child_tax_credit: 'the refundable part of the child tax credit (line 28)',
+  prior_refund: 'the refund on LAST year\'s return for this client', prior_amount_owed: 'the balance due on LAST year\'s return for this client',
+  standard_deduction: 'the standard or itemized deduction taken (line 12)', deduction_kind: 'whether line 12 is the standard deduction or itemized deductions (text, never narrated as an amount)', qbi_deduction: 'qualified business income deduction (line 13)',
   additional_deductions: 'additional deductions from Schedule 1-A (line 13b)', taxable_income: 'taxable income (line 15) — the amount the tax is calculated on',
   total_tax: 'total federal tax for the year (line 24): income tax plus any other taxes included in the total, such as self-employment tax — NOT the refund and NOT what was withheld', withholding: 'federal income tax already paid through paycheck withholding (line 25d)',
   estimated_payments: 'estimated tax payments already made (line 26)', effective_rate: 'total federal tax (line 24) as a percentage of adjusted gross income — always CALCULATED from those two figures, never taken from a stored value',
@@ -32,11 +34,11 @@ function buildFacts(pd, taxYear) {
   put('tax_year', first(taxYear, pd.tax_year, pd.taxYear), YEAR);
   const status = pd.filing_status ?? pd.filingStatus; put('filing_status', typeof status === 'string' ? status : undefined, TEXT);
   put('wages', first(pd.wages), MONEY);
-  put('interest', first(pd.taxableInterest), MONEY);
-  put('dividends', first(pd.ordinaryDividends), MONEY);
+  put('interest', first(pd.taxableInterest, pd.interest), MONEY);
+  put('dividends', first(pd.ordinaryDividends, pd.ordinary_dividends), MONEY);
   put('ira_distributions', first(pd.taxableIRA), MONEY);
-  put('pensions', first(pd.taxablePensions), MONEY);
-  put('social_security', first(pd.taxableSocialSecurity), MONEY);
+  put('pensions', first(pd.taxablePensions, pd.pensions), MONEY);
+  put('social_security', first(pd.taxableSocialSecurity, pd.taxable_social_security), MONEY);   // never the manual-entry GROSS benefit (pd.social_security)
   put('capital_gains', first(pd.capital_gains, pd.capitalGainLoss), MONEY);
   put('business_income', first(pd.business_income, pd.scheduleC_netProfit), MONEY);
   put('other_income', first(pd.other_income, pd.otherIncome), MONEY);
@@ -44,9 +46,31 @@ function buildFacts(pd, taxYear) {
   // fact so it is a verified figure for the narration checks.
   for (const [k, lossKey] of [['capital_gains', 'capital_loss'], ['business_income', 'business_loss'], ['other_income', 'other_income_loss']])
     if (f[k] && typeof f[k].value === 'number' && f[k].value < 0) put(lossKey, -f[k].value, MONEY);
+  put('child_tax_credit', first(pd.childTaxCredit, pd.child_tax_credit), MONEY);
+  put('other_credits', first(pd.otherCredits), MONEY);
+  put('earned_income_credit', first(pd.earnedIncomeCredit, pd.eic), MONEY);
+  put('additional_child_tax_credit', first(pd.additionalChildTaxCredit, pd.actc), MONEY);
   put('total_income', first(pd.total_income, pd.totalIncome), MONEY);
   put('agi', first(pd.agi), MONEY);
   put('standard_deduction', first(pd.standard_deduction, pd.standardDeduction), MONEY);
+  // Standard or itemized? Manual entry records it; for an imported return, line 12 equal to the standard deduction for the filing status
+  // (plus any age-65/blind additions) means standard, more than that means itemized. Unknown → the neutral sentence.
+  {
+    const v = f.standard_deduction?.value, st = String(f.filing_status?.value || '');
+    let kind = pd.deduction_type === 'itemized' || pd.deduction_type === 'standard' ? pd.deduction_type : null;
+    if (!kind && typeof v === 'number' && v > 0) {
+      const STD = { 2024: [14600, 29200, 21900, 1950, 1550], 2025: [15750, 31500, 23625, 2000, 1600], 2026: [16100, 32200, 24150, 2050, 1650] }[f.tax_year?.value];
+      if (STD) {
+        const fk = /jointly|surviving/i.test(st) ? 1 : /head/i.test(st) ? 2 : /single|separately/i.test(st) ? 0 : -1;
+        if (fk >= 0) {
+          const base = STD[fk], add = fk === 1 || /separately/i.test(st) ? STD[4] : STD[3];
+          const std = [0, 1, 2, 3, 4].map(k => base + k * add);
+          kind = std.includes(v) ? 'standard' : v > std[fk === 1 ? 4 : 2] ? 'itemized' : null;
+        }
+      }
+    }
+    if (kind) put('deduction_kind', kind, TEXT);
+  }
   put('qbi_deduction', first(pd.qbi_deduction, pd.qbiDeduction), MONEY);
   put('additional_deductions', first(pd.additionalDeductions), MONEY);
   put('taxable_income', first(pd.taxable_income, pd.taxableIncome), MONEY);
@@ -199,4 +223,16 @@ function unverifiedAmounts(texts, { facts }) {
   return [...new Set(bad)];
 }
 
-module.exports = { buildFacts, describeFacts, checkSegmentText, placeholdersOf, substitute, PLANNING_SEGMENT, extractAmounts, numberWordAmounts, unverifiedAmounts, format, GLOSSARY };
+/** Adds last year's outcome for the same client (from that return's saved figures) as verified facts, so the narration can say it. */
+function addPriorYear(model, priorPd) {
+  if (!model || !priorPd) return model;
+  const refund = first(priorPd.refund), owed = first(priorPd.amountOwed, priorPd.amount_owed);
+  const net = first(priorPd.refund_or_owed);
+  const r = typeof refund === 'number' && refund > 0 ? refund : typeof net === 'number' && net > 0 ? net : null;
+  const o = typeof owed === 'number' && owed > 0 ? owed : typeof net === 'number' && net < 0 ? -net : null;
+  if (r) model.facts.prior_refund = { value: r, kind: MONEY };
+  else if (o) model.facts.prior_amount_owed = { value: o, kind: MONEY };
+  return model;
+}
+
+module.exports = { addPriorYear, buildFacts, describeFacts, checkSegmentText, placeholdersOf, substitute, PLANNING_SEGMENT, extractAmounts, numberWordAmounts, unverifiedAmounts, format, GLOSSARY };

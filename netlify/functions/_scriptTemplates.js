@@ -25,6 +25,14 @@ const T = {
   agi:                  { text: 'After adjustments, your adjusted gross income was {{agi}}.',                  anchor: /adjusted gross|\bAGI\b/i,             ref: 'agi',                section: 'income' },
   standard_deduction:   { text: 'Your standard or itemized deduction was {{standard_deduction}}.',             anchor: /deduction/i,                          ref: 'standard_deduction', section: 'deductions' },
   qbi_deduction:        { text: 'Your qualified business income deduction was {{qbi_deduction}}.',             anchor: /qualified business|business income deduction|\bQBI\b/i, ref: 'qbi_deduction', section: 'deductions' },
+  standard_deduction_std:  { text: 'You took the standard deduction of {{standard_deduction}}.',     anchor: /deduction/i, ref: 'standard_deduction', section: 'deductions' },
+  standard_deduction_item: { text: 'Your itemized deductions came to {{standard_deduction}}.',        anchor: /deduction/i, ref: 'standard_deduction', section: 'deductions' },
+  child_tax_credit:     { text: 'Credits for your dependents lowered your tax by {{child_tax_credit}}.',           anchor: /dependent|credit/i,           ref: 'child_tax_credit',   section: 'tax' },
+  other_credits:        { text: 'Other credits lowered your tax by another {{other_credits}}.',                   anchor: /credit/i,                            ref: 'other_credits',      section: 'tax' },
+  earned_income_credit: { text: 'The earned income credit added {{earned_income_credit}} to what you get back.',    anchor: /earned income credit/i,              ref: 'earned_income_credit', section: 'result' },
+  additional_child_tax_credit: { text: 'The refundable part of the child tax credit added {{additional_child_tax_credit}}.', anchor: /child tax credit|refundable/i, ref: 'additional_child_tax_credit', section: 'result' },
+  prior_refund:         { text: 'For comparison, last year you received a refund of {{prior_refund}}.',          anchor: /last year/i,                         ref: 'refund',             section: 'result' },
+  prior_amount_owed:    { text: 'For comparison, last year you had a balance due of {{prior_amount_owed}}.',     anchor: /last year/i,                         ref: 'amount_owed',        section: 'result' },
   additional_deductions:{ text: 'Additional deductions from Schedule 1-A came to {{additional_deductions}}.',  anchor: /schedule 1-A|additional deduction/i,  ref: 'standard_deduction', section: 'deductions' },
   taxable_income:       { text: 'That leaves taxable income of {{taxable_income}}.',                           anchor: /taxable income|taxed/i,               ref: 'taxable_income',     section: 'deductions' },
   total_tax:            { text: 'Your total federal tax for the year was {{total_tax}}.',               anchor: /\btax\b/i,                            ref: 'total_tax',          section: 'tax' },
@@ -46,7 +54,8 @@ const SOURCES = {
   wages: 'Line 1z — "Add lines 1a through 1h" (total wages and other earned income)', interest: 'Line 2b — Taxable interest', dividends: 'Line 3b — Ordinary dividends',
   ira_distributions: 'Line 4b — IRA distributions, taxable amount', pensions: 'Line 5b — Pensions and annuities, taxable amount', social_security: 'Line 6b — Social security benefits, taxable amount',
   capital_gains: 'Line 7 (7a on the 2025 form) — Capital gain or (loss)', business_income: 'Schedule 1, line 3 — Business income or (loss) (manual entry only)',
-  other_income: 'Line 8 — Additional income from Schedule 1, line 10', capital_loss: 'Line 7 when negative — Capital (loss), stated as a positive amount', business_loss: 'Schedule 1, line 3 when negative — Business (loss), stated as a positive amount',
+  other_income: 'Line 8 — Additional income from Schedule 1, line 10', child_tax_credit: 'Line 19 — Child tax credit or credit for other dependents', earned_income_credit: 'Line 27 — Earned income credit (EIC)', additional_child_tax_credit: 'Line 28 — Additional child tax credit (Schedule 8812)', other_credits: 'Line 20 — Amount from Schedule 3, line 8',
+  prior_refund: 'Prior-year return for the same client in TaxStory — line 35a', prior_amount_owed: 'Prior-year return for the same client in TaxStory — line 37', standard_deduction_std: 'Line 12 — Standard deduction (when it equals the standard amount)', standard_deduction_item: 'Line 12 — Itemized deductions (when above the standard amount)', capital_loss: 'Line 7 when negative — Capital (loss), stated as a positive amount', business_loss: 'Schedule 1, line 3 when negative — Business (loss), stated as a positive amount',
   other_income_loss: 'Line 8 when negative — Additional income (loss) from Schedule 1, stated as a positive amount', total_income: 'Line 9 — Total income', agi: 'Line 11 (11a on the 2025 form) — Adjusted gross income',
   standard_deduction: 'Line 12 (12e on the 2025 form) — Standard deduction or itemized deductions', qbi_deduction: 'Line 13 (13a on the 2025 form) — Qualified business income deduction',
   additional_deductions: '2025 form only, line 13b — Additional deductions from Schedule 1-A', taxable_income: 'Line 15 — Taxable income',
@@ -58,7 +67,7 @@ const SOURCES = {
 
 /** The review sheet: every sentence, where its figure comes from, and a column for the reviewing CPA's initials and the tax year reviewed. */
 function renderTemplateReview() {
-  const rows = [['intro', INTRO.text], ...ORDER.map(k => [k, T[k].text]), ...Object.values(LOSS_OF).map(k => [k, T[k].text]), ['refund', T.refund.text], ['amount_owed', T.amount_owed.text], ['even', T.even.text], ['planning', PLANNING_SEGMENT.text], ['outro', OUTRO.text]];
+  const rows = [['intro', INTRO.text], ...ORDER.map(k => [k, T[k].text]), ...Object.values(LOSS_OF).map(k => [k, T[k].text]), ['standard_deduction_std', T.standard_deduction_std.text], ['prior_refund', T.prior_refund.text], ['prior_amount_owed', T.prior_amount_owed.text], ['standard_deduction_item', T.standard_deduction_item.text], ['refund', T.refund.text], ['amount_owed', T.amount_owed.text], ['even', T.even.text], ['planning', PLANNING_SEGMENT.text], ['outro', OUTRO.text]];
   return `# Narration template review sheet
 
 *Generated from \`netlify/functions/_scriptTemplates.js\` — do not edit by hand (run \`node scripts/generate_template_review.mjs\`). A test fails if this file is out of date.*
@@ -76,7 +85,7 @@ ${rows.map(([k, t]) => `| \`${k}\` | ${t.replace(/\|/g, '\\|')} | ${SOURCES[k]} 
 const LOSS_OF = { capital_gains: 'capital_loss', business_income: 'business_loss', other_income: 'other_income_loss' };
 const CORE = new Set(['total_income', 'agi', 'taxable_income', 'total_tax', 'withholding']);
 const ORDER = ['wages', 'interest', 'dividends', 'ira_distributions', 'pensions', 'social_security', 'capital_gains', 'business_income', 'other_income', 'total_income', 'agi',
-               'standard_deduction', 'qbi_deduction', 'additional_deductions', 'taxable_income', 'total_tax', 'withholding', 'estimated_payments', 'effective_rate'];
+               'standard_deduction', 'qbi_deduction', 'additional_deductions', 'taxable_income', 'child_tax_credit', 'other_credits', 'total_tax', 'earned_income_credit', 'additional_child_tax_credit', 'withholding', 'estimated_payments', 'effective_rate'];
 
 /** The deterministic script: [{ key, text (with placeholders), field_ref, section, anchor?, fixed? }]. */
 function buildBackbone({ facts, result }) {
@@ -86,12 +95,16 @@ function buildBackbone({ facts, result }) {
     const f = facts[key]; if (!f) continue;
     if (!CORE.has(key) && f.value === 0) continue;
     const lossKey = LOSS_OF[key];
-    const k = lossKey && f.value < 0 && facts[lossKey] ? lossKey : key;      // a negative gain or income is told as a loss of a positive amount
+    let k = lossKey && f.value < 0 && facts[lossKey] ? lossKey : key;        // a negative gain or income is told as a loss of a positive amount
+    if (key === 'standard_deduction' && facts.deduction_kind) k = facts.deduction_kind.value === 'itemized' ? 'standard_deduction_item' : 'standard_deduction_std';
     const t = T[k]; segs.push({ key: k, text: t.text, anchor: t.anchor, field_ref: t.ref, section: t.section });
   }
   if (result === 'refund' && facts.refund) segs.push({ key: 'refund', ...pick(T.refund) });
   else if (result === 'owed' && facts.amount_owed) segs.push({ key: 'amount_owed', ...pick(T.amount_owed) });
   else if (result === 'even') segs.push({ key: 'even', ...pick(T.even) });
+  // Last year's outcome for the same client, when that return is in TaxStory (added by addPriorYear) — the comparison clients ask about first.
+  if (facts.prior_refund) segs.push({ key: 'prior_refund', ...pick(T.prior_refund) });
+  else if (facts.prior_amount_owed) segs.push({ key: 'prior_amount_owed', ...pick(T.prior_amount_owed) });
   segs.push({ key: 'planning', text: PLANNING_SEGMENT.text, field_ref: PLANNING_SEGMENT.field_ref, section: PLANNING_SEGMENT.section, fixed: true });   // never AI-written
   segs.push({ ...OUTRO });
   return segs.map(s => ({ ...s, field_ref: s.field_ref ?? s.ref, section: s.section }));
@@ -121,4 +134,4 @@ function composeScript(backbone, rewrites, model) {
   return { segments: segments.map((s, i) => extractAmounts(s.text).every(a => allowed.has(a) || allowed.has(a.replace(/^-/, ''))) ? s : { ...s, text: substitute(backbone[i].text, model.facts) }), rewritten, rejected };
 }
 
-module.exports = { buildBackbone, composeScript, sameMultiset, renderTemplateReview, SOURCES, TEMPLATE_KEYS: ['intro', ...ORDER, 'capital_loss', 'business_loss', 'other_income_loss', 'refund', 'amount_owed', 'even', 'planning', 'outro'] };
+module.exports = { buildBackbone, composeScript, sameMultiset, renderTemplateReview, SOURCES, TEMPLATE_KEYS: ['intro', ...ORDER, 'prior_refund', 'prior_amount_owed', 'standard_deduction_std', 'standard_deduction_item', 'capital_loss', 'business_loss', 'other_income_loss', 'refund', 'amount_owed', 'even', 'planning', 'outro'] };
