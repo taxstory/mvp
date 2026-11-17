@@ -10,7 +10,9 @@
     "test:engine": "node tests/engine/run.mjs",
     "test:ui": "vitest run",
     "security:guard": "node scripts/check-deprecated-endpoints.cjs",
-    "test:security": "node --test tests/security/*.test.cjs"
+    "test:security": "node --test tests/security/*.test.cjs",
+    "test:parser": "node --test tests/parser/*.test.mjs",
+    "calibrate": "node scripts/calibrate-returns.mjs"
   },
   "dependencies": {
     "@sentry/react": "10.76.2",
