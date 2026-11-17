@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { safeMailtoAddress } from '../../utils/safeRedirect';
 import { useAuth }   from '../../context/AuthContext';
 import { supabase }  from '../../lib/supabase';
+import { identifierError } from '../../utils/pii';
 
 export default function MessagesPage() {
   const { user } = useAuth();
@@ -29,10 +30,12 @@ export default function MessagesPage() {
 
   async function sendReply(msg) {
     if (!replyBody.trim() || !user) return;
+    const idErr = identifierError(replyBody, 'Your reply');
+    if (idErr) { window.alert(idErr); return; }
     setReplySending(true);
     try {
       // Store outbound message in DB
-      await supabase.from('messages').insert({
+      const { error: insErr } = await supabase.from('messages').insert({
         user_id:   user.id,
         client_id: msg.client_id || null,
         direction: 'outbound',
@@ -40,6 +43,7 @@ export default function MessagesPage() {
         read:      true,
         sent_at:   new Date().toISOString(),
       });
+      if (insErr) throw insErr;
       // If we have the client's email, send via Resend through a simple function call
       // For now: open mailto as fallback (reliable, no extra function needed)
       const emailTo = safeMailtoAddress(msg.clients?.email) || safeMailtoAddress(msg.sent_to);   // a stored value with ?, &, commas or spaces could add recipients or a body to the mailto: link
@@ -59,7 +63,7 @@ export default function MessagesPage() {
       setReplySent(true);
       setTimeout(() => setReplySent(false), 3000);
       await fetchMessages();
-    } catch (e) { console.error('sendReply:', e); }
+    } catch (e) { console.error('sendReply:', e?.message); window.alert(`Could not send: ${e?.message || 'please try again'}`); }
     setReplySending(false);
   }
 

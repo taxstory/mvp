@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { identifierError } from '../../utils/pii';
 
 const EMPTY_FORM = { name:'', email:'', phone:'', type:'cpa', firm_name:'', notes:'' };
 
@@ -116,6 +117,8 @@ export default function ClientsPage() {
 
   async function handleSave() {
     if (!form.name.trim()) { setError('A client label is required.'); return; }
+    const idErr = identifierError(form.name, 'The client label') || identifierError(form.notes, 'Notes');
+    if (idErr) { setError(idErr); return; }
     setSaving(true); setError('');
     try {
       if (view === 'new') {
@@ -432,7 +435,10 @@ export default function ClientsPage() {
           <textarea
             defaultValue={c.notes||''}
             onBlur={async e => {
-              await supabase.from('clients').update({notes: e.target.value}).eq('id', c.id);
+              const idErr = identifierError(e.target.value, 'Notes');
+              if (idErr) { window.alert(idErr); return; }
+              const { error: nErr } = await supabase.from('clients').update({notes: e.target.value}).eq('id', c.id);
+              if (nErr) { window.alert(`Could not save notes: ${nErr.message}`); return; }
               setClients(prev => prev.map(cl => cl.id === c.id ? {...cl, notes: e.target.value} : cl));
               // Brief visual feedback so CPA knows the save happened
               const el = e.target;

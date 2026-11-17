@@ -58,7 +58,7 @@ export default function Dashboard() {
       { data: recentActivity },
     ] = await Promise.all([
       supabase.from('clients').select('*', { count: 'exact', head: true }).eq('user_id', uid),
-      supabase.from('tax_returns').select('*', { count: 'exact', head: true }).eq('user_id', uid),
+      supabase.from('tax_returns').select('*', { count: 'exact', head: true }).eq('user_id', uid).is('parsed_data->scenarios', null),
       supabase.from('ria_projections').select('*', { count: 'exact', head: true }).eq('user_id', uid),
       supabase.from('tax_returns').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('status', 'audio_ready'),
       supabase.from('messages').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('direction', 'inbound').eq('read', false),

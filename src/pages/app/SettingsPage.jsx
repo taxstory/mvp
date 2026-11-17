@@ -8,20 +8,44 @@ import { useAuth }    from '../../context/AuthContext';
 import PrivacyModeCard from '../../components/PrivacyModeCard';
 import { normalizeWebsite, logoUploadInfo } from '../../utils/inputs';
 import { supabase }   from '../../lib/supabase';
+import { useNavigate } from 'react-router-dom';
+import { clearAllDrafts } from '../../utils/drafts';
 
-const BRAND_COLORS = [
-  'var(--purple)','var(--color-blue-mid)','var(--color-green-mid)','var(--color-red-mid)',
-  'var(--color-amber)','var(--color-violet)','var(--color-teal)','var(--dark)',
-];
+// Literal hex: the colour is stored and used in client emails and the rendered video, where CSS variables do not exist.
+// (Stored as 'var(--…)', every firm's choice was rejected by the server's colour check and replaced with TaxStory violet.)
+const BRAND_COLORS = ['#6B5CE7','#2563EB','#059669','#DC2626','#D97706','#7C3AED','#0891B2','#1A1230'];
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [delOpen,  setDelOpen]  = useState(false);
+  const [delText,  setDelText]  = useState('');
+  const [delPw,    setDelPw]    = useState('');
+  const [delBusy,  setDelBusy]  = useState(false);
+  const [delError, setDelError] = useState('');
+
+  async function deleteAccount() {
+    setDelBusy(true); setDelError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/.netlify/functions/delete-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ confirm: delText, password: delPw }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) throw new Error(json.error || 'Deletion failed');
+      clearAllDrafts();
+      await signOut().catch(() => {});
+      navigate('/', { replace: true });
+    } catch (e) { setDelError(e.message); setDelBusy(false); }
+  }
 
   // Form state — mirrors profile table columns
   const [firmName,    setFirmName]    = useState('');
   const [phone,       setPhone]       = useState('');
   const [website,     setWebsite]     = useState('');
-  const [brandColor,  setBrandColor]  = useState('var(--purple)');
+  const [brandColor,  setBrandColor]  = useState('#6B5CE7');
   const [logoUrl,     setLogoUrl]     = useState('');
   const [logoPreview, setLogoPreview] = useState('');
 
@@ -49,7 +73,7 @@ export default function SettingsPage() {
           setFirmName(data.firm_name    || '');
           setPhone(data.phone           || '');
           setWebsite(data.website       || '');
-          setBrandColor(data.brand_color|| 'var(--purple)');
+          setBrandColor(/^#[0-9a-f]{6}$/i.test(data.brand_color || '') ? data.brand_color : '#6B5CE7');
           setLogoUrl(data.logo_url      || '');
           setLogoPreview(data.logo_url  || '');
           setNotifVideoComplete(data.notif_video_complete  ?? true);
@@ -309,6 +333,43 @@ export default function SettingsPage() {
           To change your email or password, contact{' '}
           <a href="mailto:support@tellmytaxstory.com" style={{ color:'var(--purple)' }}>support@tellmytaxstory.com</a>
         </div>
+      </div>
+
+      {/* Delete account — permanent */}
+      <div style={{ ...s.card, marginTop:14, border:'1px solid var(--color-red-mid)' }}>
+        <div style={{ ...s.ct, color:'var(--color-red-dark)' }}>Delete account</div>
+        {!delOpen ? (
+          <>
+            <div style={{ fontSize:13, color:'var(--muted)', marginBottom:10 }}>
+              Permanently deletes your account, every client, projection, walkthrough, voiceover, video and share link, and cancels your subscription.
+              This cannot be undone. Invoices already issued stay with our payment processor for accounting records.
+            </div>
+            <button onClick={() => setDelOpen(true)}
+              style={{ padding:'9px 16px', background:'#fff', color:'var(--color-red-dark)', border:'1px solid var(--color-red-mid)', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+              Delete my account…
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize:13, color:'var(--dark)', marginBottom:10 }}>Type <strong>DELETE</strong> and enter your password to confirm.</div>
+            <input value={delText} onChange={e => setDelText(e.target.value)} placeholder="DELETE" autoComplete="off"
+              style={{ width:'100%', padding:'9px 11px', border:'1px solid var(--color-border)', borderRadius:8, fontSize:13, marginBottom:8, fontFamily:'inherit' }} />
+            <input type="password" value={delPw} onChange={e => setDelPw(e.target.value)} placeholder="Your password" autoComplete="current-password"
+              style={{ width:'100%', padding:'9px 11px', border:'1px solid var(--color-border)', borderRadius:8, fontSize:13, marginBottom:10, fontFamily:'inherit' }} />
+            {delError && <div style={{ color:'var(--color-red-dark)', fontSize:12.5, marginBottom:10 }}>{delError}</div>}
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={deleteAccount} disabled={delBusy || delText !== 'DELETE' || !delPw}
+                style={{ padding:'9px 16px', background:'var(--color-red-mid)', color:'#fff', border:'none', borderRadius:9, fontSize:13, fontWeight:700, fontFamily:'inherit',
+                  cursor: delBusy || delText !== 'DELETE' || !delPw ? 'not-allowed' : 'pointer', opacity: delBusy || delText !== 'DELETE' || !delPw ? .6 : 1 }}>
+                {delBusy ? 'Deleting…' : 'Permanently delete'}
+              </button>
+              <button onClick={() => { setDelOpen(false); setDelText(''); setDelPw(''); setDelError(''); }} disabled={delBusy}
+                style={{ padding:'9px 16px', background:'transparent', color:'var(--muted)', border:'1px solid var(--color-border)', borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                Cancel
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
     </div>
