@@ -81,11 +81,14 @@ export default function ClientPortal() {
             No walkthroughs yet. Your advisor will share one here when it's ready.
           </div>
         ) : (
-          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-            {walkthroughs.map(w => (
-              <WalkthroughCard key={w.id} walkthrough={w} />
-            ))}
-          </div>
+          <>
+            <YearTimeline walkthroughs={walkthroughs} />
+            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+              {walkthroughs.map(w => (
+                <WalkthroughCard key={w.id} walkthrough={w} />
+              ))}
+            </div>
+          </>
         )}
 
         {/* Advisor contact card */}
@@ -139,6 +142,38 @@ export default function ClientPortal() {
   );
 }
 
+// ── Your tax story, year by year ───────────────────────────────────────────────
+// One row per filed return (newest first): the outcome, and how it compares with the year before. Shown only when there are 2+ years.
+const usd = v => '$' + Math.abs(Math.round(v)).toLocaleString('en-US');
+function YearTimeline({ walkthroughs }) {
+  const years = [];
+  for (const w of walkthroughs) if (w.kind === 'return' && w.taxYear && !years.some(y => y.taxYear === w.taxYear)) years.push(w);
+  years.sort((a, b) => b.taxYear - a.taxYear);
+  if (years.length < 2) return null;
+  const net = y => (y.refund != null ? y.refund : y.owed != null ? -y.owed : null);
+  return (
+    <div style={{ background:'#fff', border:'1px solid var(--color-border)', borderRadius:16, padding:'18px 22px', marginBottom:16 }}>
+      <div style={{ fontFamily:'Georgia,serif', fontSize:17, fontWeight:700, color:'var(--color-dark)', marginBottom:12 }}>Your tax story, year by year</div>
+      {years.map((y, i) => {
+        const prev = years[i + 1];
+        const n = net(y), p = prev ? net(prev) : null;
+        const change = n != null && p != null && Math.round(n - p) !== 0
+          ? `${usd(n - p)} ${n > p ? 'more back' : 'less back'} than ${prev.taxYear}` : null;   // neutral wording: a bigger refund is not always better
+        return (
+          <div key={y.taxYear} style={{ display:'flex', justifyContent:'space-between', gap:12, padding:'10px 0', borderTop: i ? '1px solid var(--color-border)' : 'none', flexWrap:'wrap' }}>
+            <div style={{ fontWeight:700, color:'var(--color-dark)', minWidth:48 }}>{y.taxYear}</div>
+            <div style={{ flex:1, fontSize:13, color:'var(--color-dark)' }}>
+              {y.refund != null ? `Refund ${usd(y.refund)}` : y.owed != null ? `Balance due ${usd(y.owed)}` : 'Filed'}
+              {y.totalTax != null && <span style={{ color:'var(--color-muted)' }}> · total federal tax {usd(y.totalTax)}</span>}
+            </div>
+            {change && <div style={{ fontSize:12, color: n > p ? 'var(--color-green-dark)' : 'var(--color-amber-dark)', fontWeight:600 }}>{change}</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Walkthrough card ──────────────────────────────────────────────────────────
 function WalkthroughCard({ walkthrough: w }) {
   const hasViewer = w.viewerToken && w.hasVideo;
@@ -157,7 +192,7 @@ function WalkthroughCard({ walkthrough: w }) {
         <div>
           <div style={{ fontFamily:'Georgia,serif', fontSize:18, fontWeight:700,
             color:'var(--color-dark)', marginBottom:4 }}>
-            {w.taxYear ? `${w.taxYear} Tax Return` : 'Tax Return Walkthrough'}
+            {w.kind === 'scenario' ? `${w.taxYear || ''} Planning option`.trim() : w.taxYear ? `${w.taxYear} Tax Return` : 'Tax Return Walkthrough'}
           </div>
           <div style={{ fontSize:12, color:'var(--color-muted)' }}>
             Added {new Date(w.createdAt).toLocaleDateString('en-US',
