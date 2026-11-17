@@ -16,7 +16,7 @@ const STEPS = [
   { id: 3, label: 'Your branding',  icon: '🎨' },
 ];
 
-const COLORS = ['var(--color-purple)','var(--color-blue-mid)','var(--color-green-mid)','var(--color-red-mid)','var(--color-amber)','var(--color-violet)','var(--color-teal)','var(--color-dark)'];
+const COLORS = ['#6B5CE7','#2563EB','#059669','#DC2626','#D97706','#7C3AED','#0891B2','#1A1230'];   // hex: stored and used in emails and video, where CSS variables do not work
 
 export default function OnboardingWizard() {
   const { user, refreshProfile } = useAuth();
@@ -39,7 +39,7 @@ export default function OnboardingWizard() {
   const fileRef = useRef();
 
   // Step 3
-  const [brandColor,    setBrandColor]    = useState('var(--color-purple)');
+  const [brandColor,    setBrandColor]    = useState('#6B5CE7');
   const [logoFile,      setLogoFile]      = useState(null);
   const [logoPreview,   setLogoPreview]   = useState(null);
   const logoRef = useRef();
