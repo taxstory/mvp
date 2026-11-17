@@ -12,14 +12,14 @@ export function AuthProvider({ children }) {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) fetchProfile(session.user.id).catch(e => console.error('[auth] profile read failed:', e.message));   // fetchProfile now throws; never leave it unhandled
       else setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) fetchProfile(session.user.id).catch(e => console.error('[auth] profile read failed:', e.message));
       else { setProfile(null); setLoading(false); }
     });
 
