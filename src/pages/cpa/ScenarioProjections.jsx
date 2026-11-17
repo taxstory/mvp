@@ -8,6 +8,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useAuth }   from '../../context/AuthContext';
 import ScopeNotice   from '../../components/ui/ScopeNotice';
 import { supabase }  from '../../lib/supabase';
+import { identifierError } from '../../utils/pii';
 import {
   calcFullFederalTax, calcScenarios, taxOptionsFor,
   calc1041Tax, calc1065Results, calc1120Tax, calc1120SResults,
@@ -207,18 +208,19 @@ export default function ScenarioProjections() {
 
   async function saveScenarios() {
     if (!user) return;
+    const idErr = scenarios.map(s => identifierError(s.scenarioLabel, 'A scenario label')).find(Boolean);
+    if (idErr) { setSavedMsg(idErr); return; }
     setSaving(true); setSavedMsg('');
     try {
-      const payload = {
-        user_id:    user.id,
-        client_id:  clientId || null,
-        file_name:  `Scenarios — ${scenarios.map(s=>s.scenarioLabel).join(' vs ')} — ${formType} ${year}`,
-        tax_year:   year,
-        status:     'scenario_set',
-        parsed_data: { formType, year, scenarios, results },
-        notes: '',
-      };
-      await supabase.from('tax_returns').insert(payload);
+      // Through the server (validated, numbers only), not a direct insert. Results are recomputed from the inputs when opened.
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/.netlify/functions/save-scenarios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ formType, year, clientId: clientId || null, scenarios }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) throw new Error(json.error || 'Could not save');
       setSavedMsg('Saved to client record ✓');
       setTimeout(() => setSavedMsg(''), 3000);
     } catch(e) { setSavedMsg('Save failed: ' + e.message); }

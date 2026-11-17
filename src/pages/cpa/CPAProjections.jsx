@@ -20,14 +20,16 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSubscription } from '../../context/SubscriptionContext';
 import { supabase } from '../../lib/supabase';
+import { identifierError } from '../../utils/pii';
 import { FEATURES } from '../../config/features';
 import { saveDraft, loadDraft, clearDraft } from '../../utils/drafts';
 import ScopeNotice from '../../components/ui/ScopeNotice';
-import {
+import { calcIRMAA, SUPPORTED_TAX_YEARS,
   calcFullFederalTax, taxOptionsFor, getStandardDeduction, getMarginalRate,
   getBracketHeadroom, analyzeRothConversion, filingKey,
   getBracketsForYear,
 } from '../../utils/taxEngine';
+import { buildProjectionInputs } from '../../utils/projectionInputs';
 
 // Strips browser/filesystem duplicate-upload suffixes like " (2)" and the
 // .pdf extension, so an unlinked return at least shows a clean label
@@ -45,6 +47,7 @@ function cleanFigures(obj) {
     if (k === 'flags') { out.flags = Object.fromEntries(Object.entries(v || {}).filter(([, x]) => typeof x === 'boolean' || (typeof x === 'number' && Number.isFinite(x)))); continue; }
     if (typeof v === 'number') out[k] = Number.isFinite(v) ? v : 0;
     else if (typeof v === 'string') out[k] = v;
+    else if (typeof v === 'boolean') out[k] = v;      // aged, is_sstb (were silently dropped)
   }
   return out;
 }
@@ -170,7 +173,7 @@ function exportSummaryPDF(r, pd, projection, roth, flagDefs, fmt, firmNameIn) {
 }
 
 const EMPTY_FORM = {
-  name:'', year: String(new Date().getFullYear() - 1), status:'Married filing jointly', isSSBT: false, w2WagesPaid: 0, qualPropBasis: 0,
+  name:'', year: String(Math.min(Math.max(new Date().getFullYear() - 1, SUPPORTED_TAX_YEARS[0]), SUPPORTED_TAX_YEARS[SUPPORTED_TAX_YEARS.length - 1])), status:'Married filing jointly', isSSBT: false, w2WagesPaid: 0, qualPropBasis: 0,
   // Income — expanded
   wages:0, spouseWages:0, business:0, partnershipK:0,
   ordDividends:0, qualDividends:0, interest:0,
@@ -182,7 +185,7 @@ const EMPTY_FORM = {
   saltIncome:0, propertyTax:0, mortgage:0, charity:0, medical:0,
   seHealthInsurance:0, estimatedPayments:0, withholding:0,
   // Personal
-  children:0, aged:false,
+  children:0, otherDependents:0, eicChildren:'', aged:false,
 };
 
 import { useConfirm } from '../../components/ui/ConfirmProvider';
@@ -202,6 +205,10 @@ export default function CPAProjections() {
   const [view, setView]           = useState('list');
   const [returns, setReturns]     = useState([]);
   const [selected, setSelected]   = useState(null);
+  // "Adjust next year": what-if changes applied to the projection only (never saved, reset per return).
+  const NO_ADJ = { wagePct: 0, bizPct: 0, invPct: 0, retPct: 0, capGains: '', children: '', capLossCarry: '', yearsOut: 1 };
+  const [projAdj, setProjAdj]     = useState(NO_ADJ);
+  useEffect(() => { setProjAdj(NO_ADJ); }, [selected?.id]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [form, setForm]           = useState(EMPTY_FORM);
   const [saving, setSaving]       = useState(false);
   const [file, setFile]           = useState(null);
@@ -290,6 +297,8 @@ export default function CPAProjections() {
     overtimeIncome:       +form.overtime || 0,
     filingStatus:         form.status,
     children:             +form.children || 0,
+    otherDependents:      +form.otherDependents || 0,
+    ...(form.eicChildren !== '' && form.eicChildren != null ? { eicChildren: +form.eicChildren || 0 } : {}),
     // Deductions
     ...(form.deduction === 'itemized' ? {
       saltIncomeTaxesPaid:      +form.saltIncome || 0,
@@ -307,7 +316,7 @@ export default function CPAProjections() {
     form.wages, form.spouseWages, form.business, form.partnershipK,
     form.rentalNet, form.ordDividends, form.qualDividends, form.interest,
     form.ltcg, form.stcg, form.pension, form.socialSecurity, form.other,
-    form.tips, form.overtime, form.status, form.children,
+    form.tips, form.overtime, form.status, form.children, form.otherDependents, form.eicChildren,
     form.deduction, form.saltIncome, form.propertyTax, form.mortgage,
     form.charity, form.medical, form.seHealthInsurance,
     form.aged, form.withholding, form.estimatedPayments, projYear,
@@ -336,6 +345,7 @@ export default function CPAProjections() {
       .from('tax_returns')
       .select('*, clients(name,email,type)')
       .eq('user_id', user.id)
+      .is('parsed_data->scenarios', null)   // saved scenario comparisons are not returns (status alone is not enough: it changes when a walkthrough is made)
       .order('created_at', { ascending: false });
     setReturns(data || []);
     setLoading(false);
@@ -355,6 +365,20 @@ export default function CPAProjections() {
         niit: liveResult.niit || 0, amt_liability: liveResult.amtLiability || 0, effective_rate: liveResult.effectiveRate,
         marginal_rate: liveResult.marginalRate, bracket_headroom: liveResult.bracketHeadroom, withholding: +form.withholding,
         refund_or_owed: Math.round(refundOwed), tax_year: +form.year, flags: liveResult.flags,
+        // Every input, so next year's projection and the narration see the whole return (only ~10 inputs were kept before).
+        spouse_wages: +form.spouseWages || 0, partnership_k: +form.partnershipK || 0, interest: +form.interest || 0,
+        ordinary_dividends: +form.ordDividends || 0, qualified_dividends: +form.qualDividends || 0, ltcg: +form.ltcg || 0, stcg: +form.stcg || 0,
+        rental_income: +form.rentalNet || 0, pensions: +form.pension || 0, social_security: +form.socialSecurity || 0,
+        taxable_social_security: Math.round(liveResult.taxableSS || 0),   // narrated amount (social_security is the gross benefit)
+        children: Math.max(0, Math.min(30, Math.round(+form.children || 0))), aged: !!form.aged,
+        other_dependents: Math.max(0, Math.min(30, Math.round(+form.otherDependents || 0))),
+        ...(form.eicChildren !== '' && form.eicChildren != null ? { eic_children: Math.max(0, Math.min(30, Math.round(+form.eicChildren || 0))) } : {}),
+        eic: Math.round(liveResult.eic || 0), actc: Math.round(liveResult.additionalChildTaxCredit || 0),
+        cap_loss_carry_st: liveResult.capitalLossCarryoverST || 0, cap_loss_carry_lt: liveResult.capitalLossCarryoverLT || 0,   // carried into next year's projection
+        deduction_type: form.deduction === 'itemized' ? 'itemized' : 'standard', itemized_amount: +form.itemizedAmt || 0,
+        salt_income: +form.saltIncome || 0, property_tax: +form.propertyTax || 0, mortgage: +form.mortgage || 0, charity: +form.charity || 0,
+        medical: +form.medical || 0, se_health_insurance: +form.seHealthInsurance || 0, estimated_payments: +form.estimatedPayments || 0,
+        is_sstb: !!form.isSSBT, w2_wages_paid: +form.w2WagesPaid || 0, qual_prop_basis: +form.qualPropBasis || 0,
       });
       const out = await callFunction('save-return', { source: 'manual', figures, taxYear: +form.year, clientName: form.name.trim() });
       await fetchReturns();
@@ -663,6 +687,13 @@ export default function CPAProjections() {
               <div>
                 <label className="ts-fl">Tax year {!d.taxYear && <span style={{color:'var(--color-red)'}}>required</span>}</label>
                 <input type="number" min="2015" max={new Date().getFullYear() + 1} value={d.taxYear || ''} onChange={e => setParsePreview(p => ({ ...p, data: { ...p.data, taxYear: e.target.value ? Number(e.target.value) : undefined } }))} />
+                {d.taxYear && !SUPPORTED_TAX_YEARS.includes(+d.taxYear) && (
+                  <div style={{fontSize:11.5,color:'var(--color-amber-dark, #92400E)',marginTop:4}}>
+                    {+d.taxYear < SUPPORTED_TAX_YEARS[0]
+                      ? `Fine for the walkthrough (it uses the return's own figures). TaxStory's tax tables start at ${SUPPORTED_TAX_YEARS[0]}, so recalculations for ${d.taxYear} are estimates; the ${+d.taxYear + 1} projection ${+d.taxYear + 1 >= SUPPORTED_TAX_YEARS[0] ? 'uses official tables' : 'is an estimate too'}.`
+                      : `${d.taxYear} tax tables are not available yet; calculations for it use ${SUPPORTED_TAX_YEARS[SUPPORTED_TAX_YEARS.length - 1]} figures and are marked as estimates.`}
+                  </div>
+                )}
               </div>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 12px',marginBottom:14}}>
@@ -700,7 +731,12 @@ export default function CPAProjections() {
             <div className="ts-card-title">Client & filing info</div>
             <div className="ts-frow"><label className="ts-fl">Client name <span>*</span></label><input type="text" placeholder="e.g. Sarah & Michael Chen" value={form.name} onChange={upd('name')} /></div>
             <div className="ts-input-row">
-              <div className="ts-frow"><label className="ts-fl">Tax year</label><input type="number" value={form.year} onChange={upd('year')} /></div>
+              <div className="ts-frow"><label className="ts-fl">Tax year</label>
+                {/* Only years with official tax tables: a manual entry is calculated, and other years would silently use another year's law */}
+                <select value={form.year} onChange={upd('year')}>
+                  {SUPPORTED_TAX_YEARS.map(y => <option key={y} value={String(y)}>{y}</option>)}
+                </select>
+              </div>
               <div className="ts-frow"><label className="ts-fl">Filing status</label>
                 <select value={form.status} onChange={upd('status')}>
                   <option>Single</option><option>Married filing jointly</option><option>Married filing separately</option><option>Head of household</option>
@@ -829,6 +865,8 @@ export default function CPAProjections() {
             </div>
             <div className="ts-input-row">
               <div className="ts-frow"><label className="ts-fl">Children under 17 <span>(CTC)</span></label><input type="number" value={form.children} onChange={upd('children')} placeholder="0" /></div>
+              <div className="ts-frow"><label className="ts-fl">Other dependents <span>($500 credit)</span></label><input type="number" value={form.otherDependents} onChange={upd('otherDependents')} placeholder="0" /></div>
+              <div className="ts-frow"><label className="ts-fl">EIC qualifying children <span>(if different)</span></label><input type="number" value={form.eicChildren} onChange={upd('eicChildren')} placeholder="same as under 17" /></div>
               <div className="ts-frow" style={{paddingTop:18}}><div className="ts-frow" style={{display:'flex',alignItems:'center',gap:8}}>
                 <input type="checkbox" id="aged" checked={form.aged} onChange={e=>setForm(f=>({...f,aged:e.target.checked}))} style={{accentColor:'var(--purple)'}} />
                 <label htmlFor="aged" style={{fontSize:12,color:'var(--dark)',cursor:'pointer'}}>Age 65+ <span style={{color:'var(--muted)',fontWeight:400}}>($6,000 senior deduction)</span></label>
@@ -971,20 +1009,25 @@ export default function CPAProjections() {
         <div style={{display:'flex',flexDirection:'column',gap:'14px'}}>
           {/* Next-year projection using taxEngine */}
           {(() => {
-            const projYr = (r.tax_year || pd.tax_year || new Date().getFullYear()-1) + 1;
-            const nextInputs = {
-              wages:          pd.wages            || 0,
-              businessIncome: pd.business_income  || 0,
-              ltcg:           pd.capital_gains    || 0,
-              otherIncome:    pd.other_income     || 0,
-              filingStatus:   pd.filing_status    || 'Single',
-              tipIncome:      pd.tip_income       || 0,
-              overtimeIncome: pd.overtime_income  || 0,
-              aged:           !!pd.aged,
-            };
+            // "Project to": next year by default, or two years out. Years past the latest official tables are planning scenarios (the engine labels them).
+            const projYr = (r.tax_year || pd.tax_year || new Date().getFullYear()-1) + (projAdj.yearsOut === 2 ? 2 : 1);
+            // Every figure the saved return holds, with the assumptions listed (see utils/projectionInputs.js).
+            const { inputs: baseInputs, assumptions: projAssumptions, withholding: priorWithholding, estimatedPayments: priorEstPay } =
+              buildProjectionInputs(r.parsed_data || {}, r.tax_year || pd.tax_year);
+            // Apply the advisor's what-if adjustments (percent changes and overrides) on top of the carried-forward figures.
+            const pct = v => 1 + (Number(v) || 0) / 100;
+            const nextInputs = { ...baseInputs };
+            for (const k of ['wages', 'spouseWages', 'tipIncome', 'overtimeIncome']) if (nextInputs[k]) nextInputs[k] = Math.round(nextInputs[k] * pct(projAdj.wagePct));
+            for (const k of ['businessIncome', 'partnershipKIncome']) if (nextInputs[k]) nextInputs[k] = Math.round(nextInputs[k] * pct(projAdj.bizPct));
+            for (const k of ['interestIncome', 'ordinaryDividends', 'qualifiedDividends', 'rentalIncome']) if (nextInputs[k]) nextInputs[k] = Math.round(nextInputs[k] * pct(projAdj.invPct));
+            for (const k of ['rmdIncome', 'pensionDistributions', 'socialSecurity']) if (nextInputs[k]) nextInputs[k] = Math.round(nextInputs[k] * pct(projAdj.retPct));
+            if (projAdj.capGains !== '' && Number.isFinite(+projAdj.capGains)) { nextInputs.ltcg = +projAdj.capGains; nextInputs.stcg = 0; }
+            if (projAdj.children !== '' && Number.isInteger(+projAdj.children) && +projAdj.children >= 0) nextInputs.children = +projAdj.children;
+            if (projAdj.capLossCarry !== '' && Number.isFinite(+projAdj.capLossCarry) && +projAdj.capLossCarry >= 0) { nextInputs.capitalLossCarryforward = +projAdj.capLossCarry; nextInputs.capitalLossCarryforwardST = 0; }
+            const adjusted = JSON.stringify({ ...projAdj, yearsOut: 1 }) !== JSON.stringify(NO_ADJ);   // the target year is not a what-if
             const nextResult = calcFullFederalTax(nextInputs, projYr, taxOptionsFor(projYr));
             const diff = nextResult.totalFederalTax - (pd.federal_tax || 0);
-            const flags = pd.flags || nextResult.flags || {};
+            const flags = nextResult.flags || {};     // the PROJECTION's flags (it showed the prior year's stored flags under the projection)
             const roth  = analyzeRothConversion(nextResult.taxableIncome, nextResult.agi, pd.filing_status || 'Single', projYr, nextInputs);   // priced on the full return
 
             const FLAG_DEFS = [
@@ -1015,18 +1058,11 @@ export default function CPAProjections() {
                 action: 'View Roth conversion analysis ↓', actionFn: () => document.querySelector('[data-roth-anchor]')?.scrollIntoView({behavior:'smooth'}) },
               { key:'irmaaRisk',             icon:'💊', label:'IRMAA Medicare risk',        color:'var(--color-red-soft)',
                 detail: (() => {
-                  // IRMAA 2026 brackets: MFJ $212K/$266K/$330K/$394K/$750K
-                  // Part B base premium ~$185/mo. Surcharge tiers: +$74/+$187/+$300/+$413/+$526/mo
-                  const agi = nextResult.agi || 0;
-                  const mfj = (pd.filing_status || '').includes('jointly');
-                  const thresh = mfj ? 212000 : 106000;
-                  if (agi < thresh) return 'Income approaching IRMAA threshold';
-                  const surcharges_mfj = [[266000,74],[330000,187],[394000,300],[750000,413],[Infinity,526]];
-                  const surcharges_s   = [[133000,74],[167000,187],[200000,300],[500000,413],[Infinity,526]];
-                  const tiers = mfj ? surcharges_mfj : surcharges_s;
-                  const monthly = (tiers.find(([lim]) => agi <= lim) || [0,526])[1];
-                  const annual = monthly * 12 * (mfj ? 2 : 1);
-                  return `AGI ${fmt(agi)} triggers ~${fmt(annual)}/year in Medicare Part B premium surcharges (${mfj ? 'both spouses' : 'individual'})`;
+                  // Engine tables (CMS, verified). IRMAA looks back two years: this year's MAGI sets the premium two years out.
+                  const magi = nextResult.agi || 0;
+                  const ir = calcIRMAA(magi, nextInputs.filingStatus, projYr + 2);
+                  if (!ir.annualSurcharge) return `MAGI ${fmt(magi)} is near an IRMAA threshold; it sets Medicare premiums for ${projYr + 2}.`;
+                  return `MAGI ${fmt(magi)} in ${projYr} would add about ${fmt(ir.annualSurcharge)} per person on Medicare to ${projYr + 2} Part B and D premiums.`;
                 })() },
               { key:'tipsOrOvertimeDeduction',icon:'✅', label:'Tips/overtime deduction',     color:'var(--color-mint)', detail: `OBBBA deduction applied (capped, reduced at higher income) — lowers taxable income, not AGI` },
               { key:'rentalLossSuspended', icon:'🏘', label:'Rental loss suspended (§469)', color:'var(--color-amber-mid)',
@@ -1042,6 +1078,51 @@ export default function CPAProjections() {
 
             return (
               <>
+                {/* Adjust next year — what-if inputs, applied live to everything below */}
+                <div className="ts-card" style={{marginBottom:14}}>
+                  <div className="ts-card-title">Adjust {projYr}
+                    <span className="ts-card-sub">{adjusted ? 'what-if applied — not saved' : 'figures carried forward from the return'}</span>
+                  </div>
+                  <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:10,fontSize:12,color:'var(--muted)'}}>
+                    Project to:
+                    {[1, 2].map(n => {
+                      const y = (r.tax_year || pd.tax_year || new Date().getFullYear()-1) + n;
+                      const on = (projAdj.yearsOut === 2 ? 2 : 1) === n;
+                      return (
+                        <button key={n} onClick={() => setProjAdj(a => ({ ...a, yearsOut: n }))}
+                          style={{padding:'5px 12px',borderRadius:8,fontSize:12,fontFamily:'inherit',cursor:'pointer',
+                            border:`1px solid ${on ? 'var(--color-purple)' : 'var(--color-border)'}`, background: on ? 'var(--color-purple)' : '#fff', color: on ? '#fff' : 'var(--dark)'}}>
+                          {y}{!SUPPORTED_TAX_YEARS.includes(y) ? ' (scenario)' : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:10}}>
+                    {[
+                      ['wagePct',  'Wages change %',             'e.g. 5'],
+                      ['bizPct',   'Business income change %',   'e.g. -10'],
+                      ['invPct',   'Interest, dividends, rent %', '0'],
+                      ['retPct',   'Retirement income change %', 'IRA, pension, SS'],
+                      ['capGains', `${projYr} capital gains ($)`, 'carried forward'],
+                      ['children', 'Children under 17',          String(baseInputs.children ?? 0)],
+                      ['capLossCarry', 'Capital loss carryover ($)', String((baseInputs.capitalLossCarryforward || 0) + (baseInputs.capitalLossCarryforwardST || 0))],
+                    ].map(([k, label, ph]) => (
+                      <label key={k} style={{fontSize:11,color:'var(--muted)',display:'flex',flexDirection:'column',gap:4}}>
+                        {label}
+                        <input type="number" value={projAdj[k]} placeholder={ph}
+                          onChange={e => setProjAdj(a => ({ ...a, [k]: e.target.value === '' ? (['capGains', 'children', 'capLossCarry'].includes(k) ? '' : 0) : e.target.value }))}
+                          style={{padding:'7px 9px',border:'1px solid var(--color-border)',borderRadius:8,fontSize:13,fontFamily:'inherit'}} />
+                      </label>
+                    ))}
+                  </div>
+                  {adjusted && (
+                    <button onClick={() => setProjAdj(a => ({ ...NO_ADJ, yearsOut: a.yearsOut }))}
+                      style={{marginTop:10,padding:'6px 12px',background:'transparent',border:'1px solid var(--color-border)',borderRadius:8,fontSize:12,cursor:'pointer',fontFamily:'inherit',color:'var(--muted)'}}>
+                      Reset to carried-forward figures
+                    </button>
+                  )}
+                </div>
+
                 {/* Year-over-year comparison chart */}
                 {(() => {
                   const curTax  = pd.federal_tax || 0;
@@ -1088,7 +1169,11 @@ export default function CPAProjections() {
                   </div>
                 </div>
 
-                <ScopeNotice scope={nextResult.scope} />
+                <ScopeNotice scope={{ reasons: [
+                  ...projAssumptions.map((t, i) => ({ code: `proj_${i}`, level: 'warn', text: t })),
+                  { code: 'proj_flat', level: 'info', text: `${projYr} starts from every prior-year income and deduction (change them in “Adjust ${projYr}” above) under ${projYr} tax law. Withholding and estimated payments are assumed to repeat.` },
+                  ...(nextResult.scope?.reasons || []),
+                ] }} />
 
                 {/* Planning flags — surfaced automatically from engine */}
                 {FLAG_DEFS.length > 0 && (
@@ -1117,15 +1202,18 @@ export default function CPAProjections() {
                 {/* Roth conversion analysis */}
                 {/* ── Safe harbor calculation — critical for self-employed clients ── */}
                 {(() => {
-                  const totalPay = (pd.withholding || 0) + (pd.estimated_payments || 0);
+                  const totalPay = (priorWithholding || 0) + (priorEstPay || 0);   // assumes the same withholding and estimates next year
                   const tax = nextResult.totalFederalTax || 0;
                   const priorTax = pd.federal_tax || 0;
                   if (!priorTax && !tax) return null;
-                  // Safe harbor: lesser of 90% current OR 110% prior
+                  // §6654(d)(1)(B)/(C): the lesser of 90% of this year's tax or 100% of last year's — 110% when last year's AGI exceeded $150,000
+                  // ($75,000 married filing separately). It used 110% for everyone. No penalty if the balance due is under $1,000.
+                  const highIncome = (pd.agi || 0) > (/separately/i.test(nextInputs.filingStatus) ? 75000 : 150000);
+                  const priorPct = highIncome ? 1.10 : 1.00;
                   const safeHarbor90 = Math.round(tax * 0.90);
-                  const safeHarbor110 = Math.round(priorTax * 1.10);
-                  const safeHarborAmt = Math.min(safeHarbor90, safeHarbor110);
-                  const shortfall = Math.max(0, safeHarborAmt - totalPay);
+                  const safeHarborPrior = Math.round(priorTax * priorPct);
+                  const safeHarborAmt = Math.min(safeHarbor90, safeHarborPrior);
+                  const shortfall = (tax - totalPay) < 1000 ? 0 : Math.max(0, safeHarborAmt - totalPay);
                   const overpaid  = Math.max(0, totalPay - safeHarborAmt);
                   // Underpayment penalty estimate (§6654 approx: 8% APR on shortfall, 9 months avg)
                   const penaltyEst = shortfall > 1000 ? Math.round(shortfall * 0.08 * 0.75) : 0;
@@ -1135,9 +1223,7 @@ export default function CPAProjections() {
                   // withholding don't need this panel — it would confuse them.
                   const hasSEIncome = (pd.business_income || 0) + (pd.partnershipK || 0) + (pd.rental_income || 0) > 0;
                   const hasEstPay   = (pd.estimated_payments || pd.estimatedTaxPayments || 0) > 0;
-                  const isManualSE  = (+form?.business||0) + (+form?.partnershipK||0) + (+form?.rentalNet||0) > 0;
-                  const isManualEst = (+form?.estimatedPayments||0) > 0;
-                  const isSE = hasSEIncome || hasEstPay || isManualSE || isManualEst;
+                  const isSE = hasSEIncome || hasEstPay || (nextInputs.businessIncome || 0) > 0 || (priorEstPay || 0) > 0;   // was also driven by the unrelated new-entry form
                   if (!isSE) return null;  // hide entirely for pure W-2 clients
                   if (!isSE && shortfall === 0) return null;
                   return (
@@ -1147,7 +1233,7 @@ export default function CPAProjections() {
                       </div>
                       <div style={{display:'flex',flexDirection:'column',gap:6}}>
                         {[
-                          ['Safe harbor amount', fmt(safeHarborAmt), null, '90% current or 110% prior year tax'],
+                          ['Safe harbor amount', fmt(safeHarborAmt), null, `Lesser of 90% of ${projYr} tax or ${highIncome ? '110' : '100'}% of prior-year tax`],
                           ['Total payments to date', fmt(totalPay), null, 'Withholding + estimated payments'],
                           shortfall > 0 ? ['Estimated shortfall', fmt(shortfall), 'var(--color-red)', 'Additional estimated payments recommended'] : null,
                           overpaid > 0  ? ['Overpaid (safe)', fmt(overpaid), 'var(--green)', 'No underpayment penalty expected'] : null,
@@ -1269,13 +1355,17 @@ export default function CPAProjections() {
 function NoteEditor({ returnId, initialNotes }) {
   const [notes, setNotes] = useState(initialNotes);
   const [saved, setSaved]   = useState(false);
+  const [err, setErr]       = useState('');
   async function save() {
-    await supabase.from('tax_returns').update({ notes }).eq('id', returnId);
-    setSaved(true); setTimeout(() => setSaved(false), 2000);
+    const bad = identifierError(notes, 'Notes'); if (bad) { setErr(bad); return; }
+    const { error } = await supabase.from('tax_returns').update({ notes }).eq('id', returnId);
+    if (error) { setErr(`Could not save notes: ${error.message}`); return; }        // it used to show "saved" even when the write failed
+    setErr(''); setSaved(true); setTimeout(() => setSaved(false), 2000);
   }
   return (
     <>
       <textarea value={notes} onChange={e=>{setNotes(e.target.value);setSaved(false);}} style={{height:'90px',resize:'none'}} placeholder="Add notes about this return…" />
+      {err && <div style={{color:'var(--color-red-dark)',fontSize:12,marginTop:6}}>{err}</div>}
       <button className="ts-btn ts-btn-secondary ts-btn-sm" style={{marginTop:'10px'}} onClick={save}>{saved?'Saved ✓':'Save notes'}</button>
     </>
   );

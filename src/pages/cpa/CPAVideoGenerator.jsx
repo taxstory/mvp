@@ -11,6 +11,8 @@ import VideoRenderer from '../../components/VideoRenderer';
 import { SignedAudio, SignedLink, signAudio } from '../../components/SignedMedia';
 import { usePrivacyMode } from '../../hooks/usePrivacyMode';
 import UnverifiedAmountsModal from '../../components/UnverifiedAmountsModal';
+import { calcScenarios, taxOptionsFor } from '../../utils/taxEngine';
+import { FEATURES } from '../../config/features';
 
 // ── Module-level style constants ─────────────────────────────────────────────
 // Defined outside the component so they're created once, not on every render.
@@ -54,6 +56,27 @@ export default function CPAVideoGenerator() {
   const [searchParams] = useSearchParams();
 
   const [returns, setReturns]   = useState([]);
+  const [scenarioPick, setScenarioPick] = useState({ base: 0, chosen: 1 });   // for a scenario comparison walkthrough
+  const [recordBusy, setRecordBusy] = useState(null);
+
+  // Client communication record (PDF): built on request from stored data, downloaded straight to the advisor, never stored by TaxStory.
+  async function downloadRecord(taxReturnId) {
+    setRecordBusy(taxReturnId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/.netlify/functions/communication-record', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ taxReturnId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) throw new Error(json.error || 'Could not create the record');
+      const bytes = Uint8Array.from(atob(json.pdfBase64), c => c.charCodeAt(0));
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      a.download = json.filename; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    } catch (e) { window.alert(e.message); }
+    finally { setRecordBusy(null); }
+  }
   const [videos, setVideos]     = useState([]);
   const [loading, setLoading]   = useState(true);
   const [view, setView]         = useState('list');   // list | generate | detail
@@ -134,9 +157,9 @@ export default function CPAVideoGenerator() {
     setLoading(true);
     const [{ data: parsed }, { data: ready }] = await Promise.all([
       supabase.from('tax_returns')
-        .select('id,file_name,tax_year,status,created_at,clients(name)')
+        .select('id,file_name,tax_year,status,created_at,parsed_data,clients(name)')
         .eq('user_id', user.id)
-        .in('status', ['parsed','script_ready','audio_ready'])
+        .in('status', ['parsed','script_ready','audio_ready','scenario_set'])
         .order('created_at', { ascending: false }),
       supabase.from('tax_returns')
         .select('id,file_name,tax_year,status,created_at,audio_url,audio_segments,parsed_data,clients(name)')
@@ -144,7 +167,9 @@ export default function CPAVideoGenerator() {
         .eq('status', 'audio_ready')
         .order('created_at', { ascending: false }),
     ]);
-    setReturns(parsed || []);
+    // Saved scenario comparisons can be narrated too (planning modules only). Only 1040 sets with 2+ scenarios qualify.
+    setReturns((parsed || []).filter(r => !Array.isArray(r.parsed_data?.scenarios)
+      || (FEATURES.planningModules && (r.parsed_data.formType || '1040') === '1040' && r.parsed_data.scenarios.length >= 2)));
     setVideos(ready  || []);
     setLoading(false);
   }
@@ -163,9 +188,21 @@ export default function CPAVideoGenerator() {
 
       // Step 1: Generate structured script
       setCurrentStep('script');
+      // A saved scenario comparison: the engine runs here (as on the Scenarios page); the server words it with fixed sentences and the audio step
+      // asks for approval of every figure, because they are estimates.
+      const sel = returns.find(r => r.id === selectedId);
+      let scenario;
+      if (Array.isArray(sel?.parsed_data?.scenarios)) {
+        const { scenarios, year } = sel.parsed_data;
+        const res = calcScenarios(scenarios, year, taxOptionsFor(year));
+        const b = res[scenarioPick.base], c = res[scenarioPick.chosen];
+        if (!b || !c || scenarioPick.base === scenarioPick.chosen) throw new Error('Choose two different scenarios to compare.');
+        scenario = { baseIndex: scenarioPick.base, chosenIndex: scenarioPick.chosen,
+          figures: { base_tax: b.totalFederalTax, scenario_tax: c.totalFederalTax, base_rate: b.effectiveRate, scenario_rate: c.effectiveRate } };
+      }
       const sr = await fetch('/.netlify/functions/generate-script', {
         method: 'POST', headers,
-        body: JSON.stringify({ taxReturnId: selectedId }),
+        body: JSON.stringify({ taxReturnId: selectedId, ...(scenario ? { scenario } : {}) }),
       });
       if (!sr.ok) { const e = await sr.json(); throw new Error(e.error || 'Script generation failed'); }
       const { script: gs, segments: segs } = await sr.json();
@@ -441,6 +478,10 @@ export default function CPAVideoGenerator() {
                           <button className="ts-btn ts-btn-ghost ts-btn-sm" onClick={() => { setSelectedVideo(v); setView('detail'); }}>
                             View →
                           </button>
+                          <button className="ts-btn ts-btn-ghost ts-btn-sm" title="Download a PDF of what was narrated, the figures, approvals and delivery — for your records"
+                            disabled={recordBusy === v.id} onClick={() => downloadRecord(v.id)}>
+                            {recordBusy === v.id ? '…' : 'Record ↓'}
+                          </button>
                         </td>
                       </tr>
                     );
@@ -497,15 +538,32 @@ export default function CPAVideoGenerator() {
                       {r.clients?.name || cleanFilename(r.file_name)}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
+                      {Array.isArray(r.parsed_data?.scenarios) && <span style={{ fontWeight: 700, color: 'var(--purple)' }}>Planning scenario · </span>}
                       {r.file_name}{r.tax_year ? ` · Tax Year ${r.tax_year}` : ''}
                     </div>
                   </div>
                   <span className={`ts-pill ${r.status === 'audio_ready' ? 'ts-p-green' : 'ts-p-purple'}`}>
-                    {r.status === 'audio_ready' ? '✓ Has walkthrough' : r.status === 'parsed' ? 'Ready' : 'Script done'}
+                    {r.status === 'audio_ready' ? '✓ Has walkthrough' : r.status === 'parsed' || r.status === 'scenario_set' ? 'Ready' : 'Script done'}
                   </span>
                 </label>
               ))}
             </div>
+            {(() => {
+              const sel = returns.find(r => r.id === selectedId);
+              const scs = sel?.parsed_data?.scenarios;
+              if (!Array.isArray(scs)) return null;
+              const opts = scs.map((x, i) => <option key={i} value={i}>{x.scenarioLabel || `Scenario ${String.fromCharCode(65 + i)}`}</option>);
+              return (
+                <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', marginBottom: 14, fontSize: 12.5 }}>
+                  <div style={{ fontWeight: 700, color: 'var(--dark)', marginBottom: 8 }}>Compare for the client</div>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                    Current plan <select value={scenarioPick.base} onChange={e => setScenarioPick(p => ({ ...p, base: +e.target.value }))}>{opts}</select>
+                    Option to explain <select value={scenarioPick.chosen} onChange={e => setScenarioPick(p => ({ ...p, chosen: +e.target.value }))}>{opts}</select>
+                  </div>
+                  <div style={{ color: 'var(--muted)', marginTop: 8 }}>The figures are estimates: you will approve them before the voiceover is made, and the walkthrough tells the client they are estimates.</div>
+                </div>
+              );
+            })()}
 
             {/* What the video includes */}
             <div style={{ background: 'var(--bg)', borderRadius: '10px', padding: '12px 14px', marginBottom: '14px', fontSize: '12px', color: 'var(--muted)', lineHeight: 1.7 }}>
@@ -520,6 +578,9 @@ export default function CPAVideoGenerator() {
             {awaitingScriptConfirm && segments.length > 0 && (
               <div style={{background:'var(--bg)',border:'1.5px solid var(--purple)',borderRadius:12,padding:'16px 18px',marginBottom:12}}>
                 <div style={{fontSize:13,fontWeight:700,color:'var(--dark)',marginBottom:8}}>📝 Review script before generating audio</div>
+                <div style={{fontSize:12,color:'var(--muted)',marginBottom:8}}>
+                  🔒 Keep edits to the figures: no names, email addresses, phone numbers or ID numbers. The narration is sent to the voice service and shown to the client as a transcript.
+                </div>
                 {(() => {
                   // Rough audio duration estimate: ~130 words/minute for TTS narration
                   const wordCount = segments.reduce((s, sg) => s + (sg.text||'').split(/\s+/).length, 0);
