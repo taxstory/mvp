@@ -84,6 +84,17 @@ const SINGLE = [
   { key: 'totalPayments',        caption: /these are your total payments/i,                           digits: ['33'] },
   { key: 'refund',               caption: /amount of line 34 you want refunded to you/i,              digits: ['35'] },
   { key: 'amountOwed',           caption: /this is the amount you owe/i,                              digits: ['37'] },
+  // Credits on Form 1040 (2025: line 19; 2024: line 19)
+  { key: 'childTaxCredit',       caption: /child tax credit or credit for other dependents from schedule 8812/i, digits: ['19'] },
+  { key: 'otherCredits',         caption: /amount from schedule 3, line 8/i,                          digits: ['20'] },
+  { key: 'earnedIncomeCredit',   caption: /earned income credit \(eic\)/i,                             digits: ['27', '27a'] },
+  { key: 'additionalChildTaxCredit', caption: /additional child tax credit from schedule 8812/i,        digits: ['28'] },
+  // Schedules — read when the PDF includes them (a full client copy does). Their captions are unique to each schedule.
+  { key: 'scheduleC_netProfit',  caption: /business income or \(?loss\)?\.? attach schedule c/i,       digits: ['3'] },     // Schedule 1, line 3
+  { key: 'scheduleE_netIncome',  caption: /rental real estate, royalties, partnerships, s corporations, trusts, etc\.? attach schedule e/i, digits: ['5'] },   // Schedule 1, line 5
+  { key: 'selfEmploymentTax',    caption: /self-employment tax\.? attach schedule se/i,                 digits: ['4'] },     // Schedule 2, line 4
+  { key: 'netSTCG',              caption: /net short-term capital gain or \(?loss\)?\.? combine lines/i, digits: ['7'] },    // Schedule D, line 7
+  { key: 'netLTCG',              caption: /net long-term capital gain or \(?loss\)?\.? combine lines/i,  digits: ['15'] },   // Schedule D, line 15
 ];
 const PAIRS = [
   { first: /tax-?exempt interest/i,   second: /taxable interest/i,                  a: null,                    b: 'taxableInterest',        digits: ['2'] },
@@ -121,6 +132,9 @@ const KEY_LABELS = {
   standardDeduction: 'Standard or itemized deduction (12)', qbiDeduction: 'QBI deduction (13)', taxableIncome: 'Taxable income (15)', regularTax: 'Tax (16)', additionalDeductions: 'Schedule 1-A deductions (13b)',
   totalTax: 'Total tax (24)', federalWithheld: 'Federal tax withheld (25d)', estimatedTaxPayments: 'Estimated payments (26)', totalPayments: 'Total payments (33)',
   refund: 'Refund (35a)', amountOwed: 'Amount owed (37)',
+  childTaxCredit: 'Child / other dependent credit (19)', otherCredits: 'Other credits, Schedule 3 (20)', earnedIncomeCredit: 'Earned income credit (27)', additionalChildTaxCredit: 'Additional child tax credit (28)', scheduleC_netProfit: 'Business income (Sch. 1, line 3)',
+  scheduleE_netIncome: 'Rental, partnership, S corp (Sch. 1, line 5)', selfEmploymentTax: 'Self-employment tax (Sch. 2, line 4)',
+  netSTCG: 'Net short-term gain/loss (Sch. D, line 7)', netLTCG: 'Net long-term gain/loss (Sch. D, line 15)',
 };
 export const FIELD_LABELS = KEY_LABELS;
 
@@ -198,17 +212,20 @@ export function reconcile(figures) {
  *             checks: {id:string,label:string,status:'pass'|'warn'|'skip',detail:string}[], quality: 'good'|'review'|'insufficient',
  *             matched: string[], missing: string[] }}
  */
-export function parseForm1040(rows) {
+export function parseForm1040(rows, { evidence: wantEvidence = false } = {}) {
   const R = (rows || []).map(clean).filter(Boolean);
-  const figures = {}, confidence = {};
+  const figures = {}, confidence = {}, evidence = {};
+  let curRow = '';
 
   const take = (key, amt, conf) => {
     if (!amt.found || amt.blank || amt.value === 0 || amt.value === undefined) return;
     if (key in figures) return;                                           // first (page-1) occurrence wins
     figures[key] = amt.value; confidence[key] = conf;
+    if (wantEvidence) evidence[key] = scrubRow(curRow);                   // calibration only: the caption row the value came from, identifiers removed
   };
 
   for (const row of R) {
+    curRow = row;
     // Captions are located on a copy where leaders are plain spaces (same length, so indices line up with `row`).
     const plain = row.split(` ${LEADER} `).join('   ');
     for (const p of PAIRS) {
@@ -245,5 +262,26 @@ export function parseForm1040(rows) {
   const missing = KEY_FIELDS.filter(k => figures[k] === undefined);
   const warns = checks.filter(c => c.status === 'warn').length;
   const quality = matched.length < 3 || missing.length >= 3 ? 'insufficient' : (missing.length === 0 && warns === 0 && checks.some(c => c.status === 'pass') ? 'good' : 'review');
-  return { figures, filingStatus, taxYear, confidence, checks, quality, matched, missing };
+  const out = { figures, filingStatus, taxYear, confidence, checks, quality, matched, missing };
+  if (wantEvidence) { out.evidence = evidence; out.vendor = detectVendor(R); }
+  return out;
+}
+
+/** Remove anything identifying from a caption row before it is shown or saved for calibration (names never sit on caption rows,
+ *  but SSNs, EINs, emails and phone numbers are stripped regardless). */
+export function scrubRow(row) {
+  return String(row || '')
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email]')
+    .replace(/(?<![0-9])[0-9]{3}[- ]?[0-9]{2}[- ]?[0-9]{4}(?![0-9])/g, '[id]')
+    .replace(/(?<![0-9])[0-9]{2}-[0-9]{7}(?![0-9])/g, '[id]')
+    .replace(/\(?[2-9][0-9]{2}\)?[ .-][0-9]{3}[ .-][0-9]{4}/g, '[phone]');
+}
+
+/** Which package printed the return, from the vendor code at the foot of each IRS form. */
+export function detectVendor(rows) {
+  const CODES = { EEA: 'Drake', BAA: 'Lacerte / ProSeries', DAA: 'UltraTax CS', LHA: 'CCH Axcess', JSA: 'GoSystem Tax RS' };
+  const counts = {};
+  for (const r of rows || []) for (const c of Object.keys(CODES)) if (new RegExp(`(^|\\s)${c}(\\s|$)`).test(r)) counts[c] = (counts[c] || 0) + 1;
+  const best = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  return best ? { code: best[0], name: CODES[best[0]] } : { code: null, name: 'Unknown' };
 }

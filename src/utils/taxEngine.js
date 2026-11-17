@@ -448,14 +448,16 @@ export function calcQBIDeduction(businessIncome, taxableIncomeBeforeQBI, filingS
   return capped;
 }
 
-export function calcChildTaxCredit(children, magi, filingStatus, year = DEFAULT_YEAR) {
-  if (children <= 0) return 0;
+export function calcChildTaxCredit(children, magi, filingStatus, year = DEFAULT_YEAR, otherDependents = 0) {
+  if (children <= 0 && otherDependents <= 0) return 0;
   const { ctcPerChild } = getBracketsForYear(year);
   const ctcAmount = ctcPerChild || 2000;
   const phaseoutStart = filingKey(filingStatus) === 'mfj' ? 400000 : 200000;
   const excessIncome  = Math.max(0, magi - phaseoutStart);
   const reductionUnits = Math.ceil(excessIncome / 1000);   // IRC §24(b)(1): $50 for each $1,000 (or fraction thereof) over the threshold (this was 2,500 — it removed only 40% of the phase-out)
-  return Math.max(0, children * ctcAmount - reductionUnits * 50);
+  // §24(h)(4): $500 for each other dependent (17+, relatives, etc.). Pooled with the child credit for the phase-out (Schedule 8812 line 12);
+  // the refundable part stays limited to qualifying children (applyCredits caps it per child).
+  return Math.max(0, Math.max(0, children) * ctcAmount + Math.max(0, otherDependents) * 500 - reductionUnits * 50);
 }
 
 /**
@@ -1037,16 +1039,61 @@ export function calcMortgageInterestDeduction(interest, loanBalance) {
 
 // Child & Dependent Care Credit
 // 20%-35% of up to $3,000 (1 child) or $6,000 (2+) of qualified expenses
-export function calcChildCareCredit(expenses, numChildren, agi) {
+export function calcChildCareCredit(expenses, numChildren, agi, year = DEFAULT_YEAR, filingStatus = 'Single') {
   if (numChildren === 0 || expenses === 0) return 0;
   const maxExpenses = numChildren === 1 ? 3000 : 6000;
   const eligible = Math.min(expenses, maxExpenses);
-  // Credit rate: 35% at AGI ≤$15K, phases to 20% at AGI >$43K
-  let rate = 0.35;
-  if (agi > 15000) {
-    rate = Math.max(0.20, 0.35 - Math.ceil((agi - 15000) / 2000) * 0.01);
+  const steps = (over, per) => (over > 0 ? Math.ceil(over / per) : 0);
+  let pct;
+  if (year >= 2026) {
+    // IRC §21(a)(2) as amended (OBBBA §70405): 50%, less 1 point per $2,000 (or fraction) of AGI over $15,000, not below 35%; then less 1 point per
+    // $2,000 ($4,000 joint) over $75,000 ($150,000 joint), not below 20%.
+    const mfj = filingKey(filingStatus) === 'mfj';
+    pct = Math.max(35, 50 - steps(agi - 15000, 2000));
+    pct = Math.max(20, pct - steps(agi - (mfj ? 150000 : 75000), mfj ? 4000 : 2000));
+  } else {
+    pct = Math.max(20, 35 - steps(agi - 15000, 2000));    // prior law: 35%, less 1 point per $2,000 over $15,000, not below 20%
   }
-  return Math.round(eligible * rate);
+  return Math.round(eligible * pct / 100);
+}
+
+// ─── Earned income credit (IRC §32) ─────────────────────────────────────────────────────────────────────────
+// Dollar amounts from Rev. Proc. 2023-34 (2024), 2024-40 (2025), 2025-32 (2026; verified Nov 2026). Rates are statutory (§32(b)(1)).
+// [max credit by 0/1/2/3+ children], threshold phase-out [single/HOH, MFJ] for 0 children and for 1+, investment income limit.
+const EIC = {
+  2024: { max: [632, 4213, 6960, 7830],  start0: [10330, 17250], start1: [22720, 29640], invest: 11600 },
+  2025: { max: [649, 4328, 7152, 8046],  start0: [10620, 17730], start1: [23350, 30470], invest: 11950 },
+  2026: { max: [664, 4427, 7316, 8231],  start0: [10860, 18140], start1: [23890, 31160], invest: 12200 },
+};
+const EIC_RATE  = [0.0765, 0.34, 0.40, 0.45];
+const EIC_PHASE = [0.0765, 0.1598, 0.2106, 0.2106];
+const _eicMid = x => (x < 1 ? 0 : Math.floor(x / 50) * 50 + 25);   // the IRS EIC table: $50 bands, credit at the band midpoint
+function _eicAt(x, k, t, mfj) {
+  const credit = Math.min(t.max[k], EIC_RATE[k] * x);
+  const start  = (k === 0 ? t.start0 : t.start1)[mfj ? 1 : 0];
+  return Math.max(0, credit - EIC_PHASE[k] * Math.max(0, x - start));
+}
+/**
+ * Earned income credit, computed the way the 1040 EIC table does (so it matches tax software). `children` = qualifying children for the EIC
+ * (relationship, residency and age tests assumed met). Married filing separately qualifies only when living apart (`mfsLivedApart`). Without
+ * children, the taxpayer (or spouse) must be 25–64 when ages are given.
+ */
+export function calcEIC({ earnedIncome = 0, agi = 0, investmentIncome = 0, children = 0, filingStatus = 'Single', year = DEFAULT_YEAR,
+  taxpayerAge = null, spouseAge = null, mfsLivedApart = false } = {}) {
+  const t = EIC[Math.min(2026, Math.max(2024, year))];
+  const fk = filingKey(filingStatus);
+  if (fk === 'mfs' && !mfsLivedApart) return 0;
+  if (earnedIncome <= 0 || investmentIncome > t.invest) return 0;
+  const k = Math.min(3, Math.max(0, Math.floor(children)));
+  if (k === 0) {
+    const ages = [taxpayerAge, fk === 'mfj' ? spouseAge : null].filter(a => typeof a === 'number' && a > 0);
+    if (ages.length && !ages.some(a => a >= 25 && a <= 64)) return 0;
+  }
+  const mfj = fk === 'mfj';
+  let credit = _eicAt(_eicMid(earnedIncome), k, t, mfj);
+  const start = (k === 0 ? t.start0 : t.start1)[mfj ? 1 : 0];
+  if (Math.round(agi) !== Math.round(earnedIncome) && agi >= start) credit = Math.min(credit, _eicAt(_eicMid(agi), k, t, mfj));   // the greater of AGI or earned income
+  return Math.round(credit);
 }
 
 // Education Credits — American Opportunity (up to $2,500) & Lifetime Learning ($2,000)
@@ -1205,6 +1252,7 @@ function _calcGrossIncome({ wages, spouseWages, businessIncome, partnershipKInco
   const ordinaryIncome = common + effectiveRentalIncome + taxableSS;
   const grossIncome = ordinaryIncome + netLTCG + qualifiedDividends;
   return { totalWages, totalLTCG: cg.totalLong, totalSTCG: cg.totalShort, netLTCG, netSTCG, capitalLossDeduction: cg.lossDeduction,
+    capitalLossCarryoverST: cg.carryforwardST, capitalLossCarryoverLT: cg.carryforwardLT,
     carryforwardST: cg.carryforwardST, carryforwardLT: cg.carryforwardLT, carryforwardRemaining, ordinary1231Loss,
     rentalPAL, effectiveRentalIncome, palMagi, taxableSS, ordinaryIncome, grossIncome };
 }
@@ -1348,16 +1396,16 @@ const ACTC_MAX_PER_CHILD = { 2024: 1700, 2025: 1700, 2026: 1700 };
  * of the child credit is refundable up to the ACTC limits, and the refundable American Opportunity portion is added to payments. (A single "total credits" subtracted from total tax
  * let credits wipe out SE tax and never produced a refundable amount.)
  */
-export function applyCredits({ incomeTax = 0, nonrefundableOther = 0, ctc = 0, aotcRefundable = 0, earnedIncome = 0, children = 0, year = DEFAULT_YEAR } = {}) {
+export function applyCredits({ incomeTax = 0, nonrefundableOther = 0, ctc = 0, aotcRefundable = 0, earnedIncome = 0, children = 0, year = DEFAULT_YEAR, eic = 0 } = {}) {
   const tax = Math.max(0, incomeTax), other = Math.max(0, nonrefundableOther), child = Math.max(0, ctc);
   const otherApplied = Math.min(tax, other);
   const ctcApplied = Math.min(tax - otherApplied, child);
   const ctcUnused = child - ctcApplied;
   const perChild = ACTC_MAX_PER_CHILD[year] ?? ACTC_MAX_PER_CHILD[2026];
   const actc = Math.round(Math.min(ctcUnused, perChild * Math.max(0, children), 0.15 * Math.max(0, earnedIncome - 2500)));
-  const refundable = actc + Math.max(0, aotcRefundable);
+  const refundable = actc + Math.max(0, aotcRefundable) + Math.max(0, eic);
   return { otherApplied, ctcApplied, nonrefundableApplied: otherApplied + ctcApplied, nonrefundableUnused: (other - otherApplied) + (ctcUnused - actc),
-    additionalChildTaxCredit: actc, aotcRefundable: Math.max(0, aotcRefundable), refundableTotal: refundable };
+    additionalChildTaxCredit: actc, aotcRefundable: Math.max(0, aotcRefundable), eic: Math.max(0, eic), refundableTotal: refundable };
 }
 
 function _calcCredits(agi, inputs, year) {
@@ -1365,8 +1413,8 @@ function _calcCredits(agi, inputs, year) {
     educationExpenses = 0, isAmericanOpportunity = true, energyCredits = 0,
     evCredit: evCreditInput = 0, foreignTaxCredit = 0, otherCredits = 0,
     filingStatus } = inputs;
-  const ctc          = calcChildTaxCredit(children, agi, filingStatus, year);
-  const childCareCred= calcChildCareCredit(dependentCareExpenses, children || numDependents, agi);
+  const ctc          = calcChildTaxCredit(children, agi, filingStatus, year, inputs.otherDependents || 0);   // includes the $500 credit for other dependents
+  const childCareCred= calcChildCareCredit(dependentCareExpenses, inputs.careDependents ?? (children || numDependents), agi, year, filingStatus);
   const educationCred= calcEducationCredit(educationExpenses, isAmericanOpportunity, agi, filingStatus);
   const evCred       = calcEvCredit(evCreditInput, agi, filingStatus, year);
   const energyAllowed = year >= 2026 ? 0 : energyCredits;   // §25C / §25D ended for property placed in service / expenditures after Dec 31, 2025 (OBBBA)
@@ -1385,7 +1433,7 @@ function _calcCredits(agi, inputs, year) {
  * What this result can and cannot be trusted for. `validated` is false when the return touches an area the engine only approximates; each reason says which and why, so the screen can
  * show it. This is not a disclaimer: it is computed from the return itself.
  */
-function _scope({ inputs, year, supported, taxes, ded, gross, credits, qualifiedCap }) {
+function _scope({ inputs, year, supported, taxes, ded, gross, credits, qualifiedCap, eic = 0 }) {
   const reasons = []; const warn = (code, text) => reasons.push({ code, level: 'warn', text }); const info = (code, text) => reasons.push({ code, level: 'info', text });
   if (!supported) warn('scenario_year', `Tax year ${year} has no official tables: this is a planning scenario (latest dollar figures held, scheduled provisions removed), not a computation.`);
   const regular = taxes.ordinaryTax + taxes.ltcgTax;
@@ -1402,9 +1450,8 @@ function _scope({ inputs, year, supported, taxes, ded, gross, credits, qualified
     info('obbba_eligibility', 'The tips, overtime, senior and auto-loan deductions assume the eligibility rules (occupation, reporting, SSN, qualifying vehicle) are met.');
   if (filingKey(inputs.filingStatus || 'Single') === 'mfs' && !inputs.mfsLivedApart && ((inputs.socialSecurity || 0) > 0 || inputs.onMedicare))
     info('mfs_together', 'Married filing separately is assumed to have lived with the spouse during the year: Social Security is taxable from the first dollar and Medicare IRMAA uses the separate-return table.');
-  const earned = gross.totalWages + Math.max(0, (inputs.businessIncome || 0) + (inputs.partnershipKIncome || 0) + (inputs.farmIncome || 0));
-  if (earned > 0 && ded.taxableIncome >= 0 && (gross.grossIncome || 0) < 70000 && filingKey(inputs.filingStatus || 'Single') !== 'mfs')
-    warn('eic_not_modelled', 'The earned income credit is not modelled. This return may qualify for it: compute it in your tax software before relying on the refund or balance due.');
+  if (eic > 0)
+    info('eic', 'The earned income credit assumes the qualifying-child tests (relationship, residency, age) and the SSN, residency and filing-status rules are met; children for the EIC default to the child-tax-credit count (set eicChildren if different).');
   if ((ded.itemizedLimitation || 0) > 0)
     info('itemized_limit', `The 2026 limit on itemized deductions (2/37 rule for the 37% bracket) reduced them by $${ded.itemizedLimitation.toLocaleString('en-US')}; it is measured before the QBI deduction.`);
   if ((ded.nonItemizerCharity || 0) > 0)
@@ -1415,7 +1462,6 @@ function _scope({ inputs, year, supported, taxes, ded, gross, credits, qualified
     info('credits', 'Credits follow Form 1040 order. The additional child tax credit uses the 15% method only; the American Opportunity refundable part assumes the student qualifies; "other credits" are treated as nonrefundable.');
   if (year >= 2026 && ded.useItemized && (inputs.itemizedDeductions || 0) > 0 && !((inputs.cashCharity || 0) > 0 || (inputs.mortgageInterestPrimary || 0) > 0 || (inputs.saltIncomeTaxesPaid || 0) > 0))
     info('itemized_lump', 'Itemized deductions were entered as one total, so the 2026 0.5%-of-AGI charitable floor could not be applied; the 2/37 top-bracket limit was.');
-  if (year >= 2026 && (inputs.dependentCareExpenses || 0) > 0) warn('dependent_care_2026', 'The 2026 enhancement of the dependent-care credit is not modelled.');
   return { validated: !reasons.some(r => r.level === 'warn'), reasons };
 }
 
@@ -1482,8 +1528,13 @@ function _calcFullFederalTax(inputs, year, supported) {
   const incomeTaxBeforeCredits = taxes.ordinaryTax + taxes.ltcgTax + calcDepreciationRecaptureTax(unrecaptured1250Gain) + taxes.amtLiability;
   const otherTaxes = seTax + taxes.niit + taxes.addlMedicare;
   const earnedIncome = gross.totalWages + Math.max(0, totalSEIncome - seDeduction);           // for the additional child tax credit
+  // Earned income credit: investment income per §32(i)(2) — interest (incl. tax-exempt), dividends, net capital gain, net rental income.
+  const eicInvestment = (inputs.interestIncome || 0) + (inputs.taxExemptInterest || 0) + (inputs.ordinaryDividends || 0)
+    + Math.max(0, (inputs.ltcg || 0) + (inputs.stcg || 0)) + Math.max(0, inputs.rentalIncome || 0);
+  const eic = calcEIC({ earnedIncome, agi: adj.agi, investmentIncome: eicInvestment, children: inputs.eicChildren ?? children,
+    filingStatus, year, taxpayerAge: inputs.taxpayerAge ?? null, spouseAge: inputs.spouseAge ?? null, mfsLivedApart: !!inputs.mfsLivedApart });
   const seq = applyCredits({ incomeTax: incomeTaxBeforeCredits, nonrefundableOther: credits.nonrefundableOther, ctc: credits.ctc,
-    aotcRefundable: credits.aotcRefundable, earnedIncome, children, year });
+    aotcRefundable: credits.aotcRefundable, earnedIncome, children, year, eic });
   const taxBeforeCredits = incomeTaxBeforeCredits + otherTaxes;
   const totalTax    = Math.max(0, Math.round(taxBeforeCredits - seq.nonrefundableApplied));
   const totalPayments = federalWithholding + estimatedPayments + priorYearOverpayment + seq.refundableTotal;   // Form 1040 line 33 includes refundable credits
@@ -1506,9 +1557,11 @@ function _calcFullFederalTax(inputs, year, supported) {
     tipsDeduction: ded.tipsDed, overtimeDeduction: ded.overtimeDed,
     parametersEstimated: !BRACKETS_BY_YEAR[year],   // no official tables for this year: a scenario (latest dollar figures held)
     lawAssumptions: getLawAssumptions(year),
-    scope: _scope({ inputs, year, supported, taxes, ded, gross, credits, qualifiedCap }),
+    scope: _scope({ inputs, year, supported, taxes, ded, gross, credits, qualifiedCap, eic: seq.eic }),
     partnershipKIncome, farmIncome, cryptoStcg, cryptoLtcg,
     netLTCG: gross.netLTCG, netSTCG: gross.netSTCG, capitalLossDeduction: gross.capitalLossDeduction,
+    // Unused capital loss carried to NEXT year (Schedule D Capital Loss Carryover Worksheet), short- and long-term.
+    capitalLossCarryoverST: Math.round(gross.capitalLossCarryoverST || 0), capitalLossCarryoverLT: Math.round(gross.capitalLossCarryoverLT || 0),
     carryforwardST: gross.carryforwardST, carryforwardLT: gross.carryforwardLT,
     carryforwardRemaining: gross.carryforwardRemaining,
     rentalPALAllowed: gross.rentalPAL?.allowedLoss || 0, rentalPALMagi: Math.round(gross.palMagi),
@@ -1535,7 +1588,7 @@ function _calcFullFederalTax(inputs, year, supported) {
     netInvestmentIncome: taxes.netInvestmentIncome,
     // Credits
     ...credits,
-    additionalChildTaxCredit: seq.additionalChildTaxCredit, aotcRefundable: seq.aotcRefundable, refundableCredits: seq.refundableTotal,
+    additionalChildTaxCredit: seq.additionalChildTaxCredit, aotcRefundable: seq.aotcRefundable, eic: seq.eic, refundableCredits: seq.refundableTotal,
     totalCredits: Math.round(seq.nonrefundableApplied + seq.refundableTotal),   // credits that actually reduced tax or were paid out (`creditsAvailable` is before the limits)
     // Final
     totalFederalTax: totalTax, totalPayments: Math.round(totalPayments),
