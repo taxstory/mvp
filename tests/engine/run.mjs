@@ -1,7 +1,7 @@
 // Engine validation harness. `node tests/engine/run.mjs` prints engine figures for every case.
 // When expected.json holds software figures ({ "B01": { "totalFederalTax": 4019, ... } }), it compares them and exits 1 on any variance above the tolerance (CI gate).
 import { readFileSync, existsSync } from 'node:fs';
-import { calcFullFederalTax } from '../../src/utils/taxEngine.js';
+import { calcFullFederalTax, SUPPORTED_TAX_YEARS } from '../../src/utils/taxEngine.js';
 const dir = new URL('.', import.meta.url);
 const cases = JSON.parse(readFileSync(new URL('cases.json', dir)));
 const expPath = new URL('expected.json', dir);
@@ -10,6 +10,13 @@ const TOL = Number(process.env.ENGINE_TOLERANCE ?? 5);
 export const FIELDS = ['agi','actualDeduction','seniorDeduction','tipsDeduction','overtimeDeduction','autoLoanDeduction','qbiDeduction','taxableIncome',
   'ordinaryTax','ltcgTax','amtLiability','seTax','niit','additionalMedicare','ctc','nonrefundableCreditsApplied','additionalChildTaxCredit','totalFederalTax'];
 const out = []; let failures = 0;
+// The server's manual-entry year list must match the engine's official tables.
+{
+  const src = readFileSync(new URL('../../netlify/functions/save-return.js', import.meta.url), 'utf8');
+  const m = src.match(/const MANUAL_YEARS = \[([^\]]*)\]/);
+  const server = m ? m[1].split(',').map(x => Number(x.trim())) : [];
+  if (JSON.stringify(server) !== JSON.stringify(SUPPORTED_TAX_YEARS)) { failures++; console.error(`save-return MANUAL_YEARS ${JSON.stringify(server)} != engine SUPPORTED_TAX_YEARS ${JSON.stringify(SUPPORTED_TAX_YEARS)}`); }
+}
 for (const c of cases) {
   const r = calcFullFederalTax(c.inputs, c.year);
   const row = { id: c.id, year: c.year, title: c.title };
