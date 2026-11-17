@@ -17,6 +17,7 @@ import PricingPage         from './pages/marketing/PricingPage';
 import LoginPage           from './pages/auth/LoginPage';
 import SignUpPage          from './pages/auth/SignUpPage';
 import ResetPasswordPage   from './pages/auth/ResetPasswordPage';
+import CalibratePage       from './pages/app/CalibratePage';
 import OnboardingWizard    from './pages/onboarding/OnboardingWizard';
 import Dashboard           from './pages/app/Dashboard';
 import ClientsPage         from './pages/app/ClientsPage';
@@ -102,6 +103,7 @@ export default function App() {
             <Route path="/intake"          element={<PrivateRoute><ClientIntakePage /></PrivateRoute>} />
             <Route path="/reports"         element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
             <Route path="/help"            element={<PrivateRoute><HelpPage /></PrivateRoute>} />
+            <Route path="/calibrate"       element={<PrivateRoute><CalibratePage /></PrivateRoute>} />   {/* internal: reader calibration, not in the nav */}
             <Route path="/settings"        element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
 
             {/* Tax projection tools (previously CPA-labelled) */}
