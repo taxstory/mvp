@@ -35,7 +35,7 @@ end $$;
 
 -- ── 3. Attach to every free-text column the browser can write ──────────────────────────────────────────────────────────────
 do $$
-declare r record;
+declare r record; cols_present text; args_present text;
 begin
   for r in select * from (values
       ('clients',           'name, notes',  'name, notes'),
@@ -45,12 +45,15 @@ begin
       ('video_share_links', 'label',        'label')
     ) as v(tbl, cols, args)
   loop
-    if to_regclass('public.' || r.tbl) is not null then
+    -- Only the listed columns that actually exist (a table created later is covered when 04_core_schema.sql re-runs this attach step).
+    select string_agg(quote_ident(trim(c)), ', '), string_agg(quote_literal(trim(c)), ', ')
+      into cols_present, args_present
+      from unnest(string_to_array(r.cols, ',')) c
+     where exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = r.tbl and column_name = trim(c));
+    if to_regclass('public.' || r.tbl) is not null and cols_present is not null then
       execute format('drop trigger if exists ts_reject_identifiers on public.%I', r.tbl);
-      execute format(
-        'create trigger ts_reject_identifiers before insert or update of %s on public.%I for each row execute function public.ts_reject_identifiers(%s)',
-        r.cols, r.tbl,
-        (select string_agg(quote_literal(trim(c)), ', ') from unnest(string_to_array(r.args, ',')) c));
+      execute format('create trigger ts_reject_identifiers before insert or update of %s on public.%I for each row execute function public.ts_reject_identifiers(%s)',
+        cols_present, r.tbl, args_present);
     end if;
   end loop;
 end $$;

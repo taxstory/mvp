@@ -1,38 +1,52 @@
 # Supabase: what TaxStory needs
 
-Run in the Supabase SQL editor, in this order:
+Run in the Supabase SQL editor, in this order. Every script is safe to re-run and never deletes data.
 
-1. **`01_verify.sql`** — read-only. Lists every table, column, function, policy and bucket the app uses; anything not `OK` sorts to the top.
-2. **`02_add_missing.sql`** — adds only what the onboarding and video changes need, skipping anything already there. Safe to re-run.
-3. **`03_pii_guards.sql`** — database-side SSN/EIN refusal on every free-text column the browser writes, and repair of brand colours saved as CSS variables. Safe to re-run.
-4. **`01_verify.sql`** again — everything in groups A and B should now be `OK`.
+1. **`01_verify.sql`** — read-only. Lists every table, column, function, policy, bucket and security setting the app uses; anything not `OK` sorts to the top.
+2. **`02_add_missing.sql`** — onboarding and video columns, buckets and storage policies.
+3. **`03_pii_guards.sql`** — database-side SSN/EIN refusal on every free-text column the browser writes; repair of brand colours saved as CSS variables.
+4. **`04_core_schema.sql`** — the core layer the server functions call (section C). Run it as one script.
+5. **`01_verify.sql`** again — every row should be `OK`. `MISSING` = not created; `EXPOSED` = a security setting is wrong.
 
-## A. Onboarding (added by `02_add_missing.sql`)
+## A. Onboarding (`02_add_missing.sql`)
 - `profiles`: `practice_type`, `primary_use`, `brand_color`, `logo_url`, `onboarding_completed`, `onboarding_completed_at`
 - `profiles` policies: users can SELECT and UPDATE their own row. **No INSERT policy needed** — the sign-up trigger creates the row.
 - `onboarding_state` table, `user_id` unique, with SELECT / INSERT / UPDATE policies on the user's own row (the wizard upserts)
 
-## B. Video (added by `02_add_missing.sql`)
+## B. Video (`02_add_missing.sql`)
 - `tax_returns`: `video_url`, `video_status`, `video_render_id`, `video_bucket`
 - `audio` bucket (private): accepts `video/mp4` and `video/webm`, size limit ≥ 200 MB, own-folder policy for read/write/delete
 - `firm-assets` bucket (public read): own-folder upload/replace policy for logos
 
-## C. Core app objects (check only — not created by the script)
-These carry business rules (credit charging and refunds, vendor spend caps, rate limits, share-link tokens, view tracking).
-If `01_verify.sql` reports any of them MISSING, do not improvise: send the output and the definitions will be written to match the code.
+## C. Core layer (`04_core_schema.sql`)
+Written to match exactly how `netlify/functions/*` call each function (argument names, result shapes, error codes).
 
-- Tables: `jobs`, `clients`, `messages`, `narration_approvals`, `video_share_links`, `video_view_notifications`, `subscriptions`, `usage_counters`, `ria_projections`, `audit_log`, `feedback`
-- Functions: `start_audio_job`, `claim_job`, `reap_stale_jobs`, `reserve_usage`, `refund_usage`, `reconcile_failed_job_refunds`, `count_unrefunded_failed_jobs`,
-  `reserve_vendor_budget`, `settle_vendor_call`, `release_vendor_reservation`, `assume_stale_vendor_reservations`, `rate_limit_hit`,
-  `create_share_link_for`, `record_view_event`, `touch_portal`, `handle_new_user` (+ trigger `on_auth_user_created`),
-  `looks_like_identifier`, `guard_client_contact` (PII guards — `looks_like_identifier` should also catch nine digits typed without dashes, matching `_pii.js`)
+| Area | Tables | Functions |
+|---|---|---|
+| Credits & allowances | `usage_counters` (+ pack balance), `usage_events` (one row per charge), `usage_period_rolls`, `pack_grants` | `reserve_usage`, `refund_usage`, `roll_usage_period`, `grant_pack_credits` |
+| Voiceover jobs | `jobs`, `narration_approvals` (+ content-free `narration_approval_log`) | `start_audio_job`, `claim_job`, `reap_stale_jobs`, `reconcile_failed_job_refunds`, `count_unrefunded_failed_jobs` |
+| Vendor spend caps | `vendor_calls` | `reserve_vendor_budget`, `settle_vendor_call`, `release_vendor_reservation`, `assume_stale_vendor_reservations` |
+| Rate limits | `rate_limits` | `rate_limit_hit` |
+| Sharing & viewing | `video_share_links`, `video_view_events`, `video_view_notifications` | `create_share_link_for`, `record_view_event` |
+| Client portal | `clients` portal columns (expiry from `profiles.portal_ttl_days`) | `touch_portal` |
+| Stripe | `stripe_events`, `subscriptions` (+ `last_event_created`) | `claim_stripe_event`, `finish_stripe_event`, `apply_subscription_state` |
+| Bug reports | `feedback` | — |
 
-Note: `supabase_schema.sql` at the repo root is out of date — it defines only a fraction of the above. Treat the live database as the source of truth.
+Rules it enforces:
+- **Every function is server-only.** Supabase lets signed-in users call new functions by default; 04 revokes that, so no one can grant themselves credits. `01_verify.sql` reports `EXPOSED` if this ever regresses.
+- **Charging is exact.** A job is charged once however often it is retried; plan allowance is used before purchased credits; a refund returns the unit to where it came from; purchased credits never expire; the plan allowance resets once a year from the subscription start.
+- **Starting a voiceover is all-or-nothing.** The job, the credit charge, the vendor budget hold and any approval record are one transaction: if any part fails, none of it happens.
+- **Dead jobs are cleaned up.** A job whose worker stopped (no heartbeat for 16 minutes) or that never started (10 minutes) is failed and its credit returned.
+- **Labels-only privacy (default):** client email/phone and link recipients are never stored. A firm that switches `privacy_mode` to `standard` can store them.
+- **Storage paths** (`audio_url`, `video_url`, `pdf_summary_url`, …) on a return can be set only by the server.
+- **Stripe events** are processed once, and an older event arriving late never overwrites a newer subscription state.
 
-## Free voiceover re-generation (pending)
-To let an advisor re-generate a voiceover for the same return within 24 hours without using another credit, the change belongs inside
-`start_audio_job` (it charges and creates the job in one transaction). Export the current definition and send it over:
+## Testing
+`supabase/test/run.sh` builds a throwaway Postgres database shaped like production (`test/00_supabase_stub.sql` stands in for Supabase's
+`auth`/`storage` schemas and roles; `test/01_live_baseline.sql` reproduces the live tables as of 2026-11-18), applies 02 → 04 (04 twice, to prove
+it re-runs), runs `01_verify.sql`, then `test/10_functional.sql` (76 checks: credits, refunds, jobs, reaping, budgets, rate limits, share links,
+portal, Stripe ordering, and what a signed-in user is refused).
 
-    select pg_get_functiondef('public.start_audio_job'::regproc);
+    PGHOST=... PGPORT=... PGUSER=postgres supabase/test/run.sh
 
-The change will keep the same signature, so no app code changes are needed.
+Note: `supabase_schema.sql` at the repo root is the original schema; 02–04 bring it up to date.

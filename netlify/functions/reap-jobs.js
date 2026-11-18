@@ -21,7 +21,7 @@ exports.handler = async (event) => {
     // Retention: a finished job's payload holds the narration (the client's figures). The voiceover and audio_segments on the return are the
     // record; the job copy is not needed after a week, so it is cleared. (Approvals in narration_approvals are kept: they are the audit trail.)
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-    const { error: purgeErr } = await supabase.from('jobs').update({ payload: {} }).in('status', ['done', 'failed']).lt('finished_at', weekAgo);
+    const { error: purgeErr } = await supabase.from('jobs').update({ payload: {} }).in('status', ['succeeded', 'failed']).lt('finished_at', weekAgo);
     if (purgeErr) logError('job-payload-retention', purgeErr);
     return { statusCode: 200, body: JSON.stringify({ reaped: data, reconciled, unrefunded }) };
   } catch (err) {

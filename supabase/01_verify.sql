@@ -1,5 +1,5 @@
 -- TaxStory — Supabase readiness check (READ-ONLY: changes nothing).
--- Run in the Supabase SQL editor. Every row should say OK. Anything MISSING is what needs to be added.
+-- Run in the Supabase SQL editor. Every row should say OK. Anything MISSING is what needs to be added; EXPOSED means a security setting is wrong.
 
 with
 need_cols(tbl, col) as (values
@@ -23,8 +23,12 @@ need_cols(tbl, col) as (values
   ('usage_counters','user_id'),('usage_counters','credits_used'),('usage_counters','pack_credits_balance'),
   ('ria_projections','id'),('ria_projections','user_id'),('ria_projections','client_id'),('ria_projections','notes'),
   ('audit_log','id'),('audit_log','user_id'),('audit_log','action'),('audit_log','description'),('audit_log','created_at'),
-  ('feedback','id'),
-  ('stripe_events','id')
+  ('feedback','id'),('feedback','user_id'),('feedback','title'),('feedback','status'),
+  ('stripe_events','id'),('stripe_events','status'),
+  ('usage_events','user_id'),('usage_events','job_key'),('usage_events','refunded_at'),('usage_counters','pack_credits_lifetime'),('usage_counters','period_start'),
+  ('vendor_calls','call_key'),('vendor_calls','status'),('rate_limits','key'),('pack_grants','event_id'),('usage_period_rolls','key'),
+  ('video_view_events','share_link_id'),('video_view_events','event_type'),('video_view_events','created_at'),
+  ('subscriptions','last_event_created'),('clients','portal_access_count'),('clients','portal_last_accessed_at'),('tax_returns','notes')
 ),
 need_fns(fn) as (values
   ('handle_new_user'),('start_audio_job'),('claim_job'),('reap_stale_jobs'),('reserve_usage'),('refund_usage'),('reconcile_failed_job_refunds'),('count_unrefunded_failed_jobs'),
@@ -79,5 +83,21 @@ checks as (
          case when exists (select 1 from pg_policies p where p.schemaname='storage' and p.tablename='objects' and (p.cmd=v.cmd or p.cmd='ALL')
                            and coalesce(p.qual,'')||coalesce(p.with_check,'') like '%audio%') then 'OK' else 'MISSING' end
   from (values ('SELECT'),('INSERT'),('UPDATE'),('DELETE')) v(cmd)
+  union all
+  -- Billing/security functions must NOT be callable by signed-in users (Supabase grants that by default).
+  select 10, 'function access', f.fn||'() is server-only',
+         case when not exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname=f.fn) then 'MISSING'
+              when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname=f.fn
+                           and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))) then 'EXPOSED'
+              else 'OK' end
+  from (values ('reserve_usage'),('refund_usage'),('grant_pack_credits'),('apply_subscription_state'),('roll_usage_period'),('start_audio_job'),
+               ('reserve_vendor_budget'),('create_share_link_for'),('record_view_event'),('touch_portal'),('claim_job')) f(fn)
+  union all
+  select 11, 'rls enabled', t.tbl,
+         case when not exists (select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname=t.tbl) then 'MISSING'
+              when (select c.relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname=t.tbl) then 'OK'
+              else 'EXPOSED' end
+  from (values ('jobs'),('usage_events'),('usage_counters'),('subscriptions'),('stripe_events'),('vendor_calls'),('rate_limits'),('video_share_links'),
+               ('video_view_events'),('narration_approvals'),('feedback'),('clients'),('messages'),('tax_returns'),('profiles')) t(tbl)
 )
 select kind, object, status from checks order by (status='OK'), grp, object;

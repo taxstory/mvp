@@ -33,7 +33,7 @@ exports.handler = makeHandler([], async (event, { supabase, db, user, body }) =>
   const { data: links } = await db.from('video_share_links').select('id, label, created_at, expires_at, is_active').eq('tax_return_id', ret.id).order('created_at');
   const linkIds = (links || []).map(l => l.id);
   const { data: events } = linkIds.length
-    ? await db.from('video_view_notifications').select('share_link_id, event_type, created_at').in('share_link_id', linkIds).order('created_at')
+    ? await db.from('video_view_events').select('share_link_id, event_type, created_at').in('share_link_id', linkIds).order('created_at')
     : { data: [] };
 
   // ── PDF ──
@@ -76,10 +76,10 @@ exports.handler = makeHandler([], async (event, { supabase, db, user, body }) =>
   if (!(links || []).length) doc.text('Not shared yet.', L);
   for (const l of links || []) {
     row(`Share link "${l.label || 'untitled'}"`, `created ${when(l.created_at)} · expires ${when(l.expires_at)} · ${l.is_active ? 'active' : 'revoked'}`);
-    for (const e of (events || []).filter(x => x.share_link_id === l.id))
+    for (const e of (events || []).filter(x => x.share_link_id === l.id && x.event_type !== 'view_progress'))
       row('   viewing activity', `${e.event_type === 'view_complete' ? 'watched to the end' : e.event_type === 'link_opened' ? 'opened' : e.event_type.replace(/_/g, ' ')} · ${when(e.created_at)}`);
   }
-  doc.x = L; doc.moveDown(1).fontSize(8).fillColor('#6B698A').text('Viewing activity lists the events you were notified of. TaxStory does not store this PDF; keep it with your own records.', { width: 504 });
+  doc.x = L; doc.moveDown(1).fontSize(8).fillColor('#6B698A').text('Viewing activity lists when each link was opened, started and watched to the end (repeat opens within 30 minutes count once). TaxStory does not store this PDF; keep it with your own records.', { width: 504 });
   doc.end(); await done;
 
   await audit(supabase, user.id, 'communication_record', `Communication record generated for ${ret.id}.`);
