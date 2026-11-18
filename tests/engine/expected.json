@@ -1,0 +1,86 @@
+{
+ "_about": "Independently established expected results. A case is either verified here (compared on every run, $1 tolerance) or listed under \"pending\" with the reason. Missing file, missing case, or any variance fails the run.",
+ "verified": {
+  "A01": {
+   "agi": 42500,
+   "taxableIncome": 27900,
+   "ordinaryTax": 3119,
+   "totalFederalTax": 3119
+  },
+  "B01": {
+   "agi": 52000,
+   "taxableIncome": 36250,
+   "ordinaryTax": 4115,
+   "totalFederalTax": 4115
+  },
+  "B02": {
+   "agi": 165000,
+   "taxableIncome": 133500,
+   "ordinaryTax": 19198,
+   "totalFederalTax": 14798
+  },
+  "B03": {
+   "agi": 62000,
+   "taxableIncome": 38375,
+   "ordinaryTax": 4265,
+   "totalFederalTax": 2065
+  },
+  "B04": {
+   "agi": 120000,
+   "taxableIncome": 104250,
+   "ordinaryTax": 17867,
+   "totalFederalTax": 17867
+  },
+  "C03": {
+   "agi": 75000,
+   "taxableIncome": 50850,
+   "ordinaryTax": 5751,
+   "totalFederalTax": 1351
+  },
+  "D01": {
+   "agi": 115500,
+   "taxableIncome": 91875,
+   "ordinaryTax": 13388,
+   "totalFederalTax": 10588
+  }
+ },
+ "sources": {
+  "A01": "Hand-checkable independent calculation: tests/engine/independent_expected.py (Rev. Proc. brackets and standard deduction, IRS Tax Table rule).",
+  "B01": "Hand-checkable independent calculation: tests/engine/independent_expected.py (Rev. Proc. brackets and standard deduction, IRS Tax Table rule).",
+  "B02": "Hand-checkable independent calculation: tests/engine/independent_expected.py (Rev. Proc. brackets and standard deduction, IRS Tax Table rule).",
+  "B03": "Hand-checkable independent calculation: tests/engine/independent_expected.py (Rev. Proc. brackets and standard deduction, IRS Tax Table rule).",
+  "B04": "Hand-checkable independent calculation: tests/engine/independent_expected.py (Rev. Proc. brackets and standard deduction, IRS Tax Table rule).",
+  "C03": "Hand-checkable independent calculation: tests/engine/independent_expected.py (Rev. Proc. brackets and standard deduction, IRS Tax Table rule).",
+  "D01": "Drake Tax 2025 Practice Return 1 solution (Drake's printed Form 1040): lines 11, 15, 16, 24."
+ },
+ "pending": {
+  "A02": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "A03": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "A04": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "A05": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "A06": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "B05": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "B06": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "B07": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "B08": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "B09": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "B10": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "B11": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "B12": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "B13": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "B14": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "B15": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "B16": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "C01": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "C02": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "C04": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "C05": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "C06": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "C07": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "C08": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "C09": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "C10": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "C11": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions).",
+  "C12": "Awaiting tax-software comparison (TaxStory-Engine-Validation.xlsx). Involves rules not hand-checkable here (gains, SE tax, QBI, AMT, NIIT, credits, OBBBA deductions)."
+ }
+}

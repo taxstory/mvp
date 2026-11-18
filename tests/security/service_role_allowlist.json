@@ -1,0 +1,99 @@
+{
+  "_about": "Every use of the SERVICE-ROLE Supabase client (bypasses row-level security) in netlify/functions, with the reason it cannot use the caller-scoped `db` client. tests/security/service_role_guard.test.mjs fails the build on any use not listed here, and on entries that are no longer used. Add an entry only with a reason a reviewer would accept.",
+  "service_key_files": {
+    "_handler.js": "Creates the per-request service-role client for makeHandler; the caller-scoped client is created alongside it.",
+    "client-portal.js": "Public, token-authenticated client portal (no TaxStory login): reads are scoped by the portal token, checked in code.",
+    "video-viewer.js": "Public, token-authenticated share-link viewer (no login): reads are scoped by the share token, checked in code.",
+    "stripe-webhook.js": "Stripe server-to-server webhook (signature-verified): no user session exists.",
+    "reap-jobs.js": "Scheduled job (no user): reaps stale audio jobs and reconciles refunds.",
+    "sweep-orphans.js": "Scheduled job (no user): removes orphaned files and applies data-retention rules."
+  },
+  "uses": {
+    "_handler.js": {
+      "from:audit_log": "Audit log is append-only system data; users must not be able to write or alter it.",
+      "from:profiles": "getFirmProfile reads the firm's branding for server-built emails/pages; called after the auth check.",
+      "from:tax_returns": "getTaxReturn helper also serves token-based callers; it enforces user_id === caller in code.",
+      "rpc:reserve_usage": "Credit/projection metering is a billing control the user must not be able to call directly.",
+      "rpc:refund_usage": "Credit refunds are a billing control the user must not be able to call directly."
+    },
+    "_notify.js": {
+      "auth:admin": "Looks up the firm's login email to send 'client watched' notices (triggered by a client, not the firm).",
+      "from:profiles": "Firm notification preferences, read on a client-triggered event.",
+      "from:tax_returns": "Return label for the notice, read on a client-triggered event.",
+      "from:video_share_links": "Share-link metadata for the notice, read on a client-triggered event.",
+      "from:video_view_notifications": "De-duplicates notices; system-managed table."
+    },
+    "_ratelimit.js": { "rpc:rate_limit_hit": "Rate-limit counters are system data the user must not reset." },
+    "_spend.js": {
+      "rpc:reserve_vendor_budget": "Vendor spend cap (OpenAI/Anthropic) is a cost control the user must not bypass.",
+      "rpc:settle_vendor_call": "Vendor spend cap settlement.",
+      "rpc:release_vendor_reservation": "Vendor spend cap release on failure."
+    },
+    "client-message.js": {
+      "auth:admin": "Firm email for the 'new client message' notice; the sender is the client (token), not the firm.",
+      "from:messages": "Inserts an inbound message from a token-authenticated client who has no login.",
+      "from:profiles": "Firm notification preference for the inbound-message notice.",
+      "from:tax_returns": "Resolves the return behind the client's share token.",
+      "from:video_share_links": "Validates the client's share token."
+    },
+    "client-portal.js": {
+      "auth:admin": "Firm contact email shown in the portal; the visitor has no login.",
+      "from:clients": "Resolves the portal token to its client (token checked in code).",
+      "from:profiles": "Firm branding for the portal page.",
+      "from:tax_returns": "Lists the client's walkthroughs for a token-authenticated visitor.",
+      "from:video_share_links": "Share links for the client's walkthroughs.",
+      "rpc:touch_portal": "Records portal access history for the firm."
+    },
+    "create-share-link.js": { "rpc:create_share_link_for": "Share tokens are minted server-side so they cannot be chosen by the caller; ownership checked first." },
+    "delete-account.js": {
+      "DYNAMIC": "Deletes the caller's rows across every table (table list fixed in code, all filtered by the caller's id) after password re-check.",
+      "auth:admin": "Deleting the login itself requires the admin API.",
+      "from:subscriptions": "Reads the caller's Stripe subscription to cancel it before deletion.",
+      "from:tax_returns": "Lists the caller's returns to delete their approvals.",
+      "storage:audio": "Removes the caller's files (folder named by the caller's id)."
+    },
+    "generate-audio-background.js": {
+      "from:jobs": "Background worker (no user session) updates job progress.",
+      "from:tax_returns": "Writes audio_url / audio_segments, system-managed columns.",
+      "rpc:claim_job": "Atomically claims the queued job."
+    },
+    "generate-pdf-summary.js": {
+      "from:tax_returns": "Writes pdf_summary_url, a system-managed column, after the ownership check.",
+      "storage:audio": "Uploads the generated PDF to the caller's folder."
+    },
+    "generate-script.js": { "from:tax_returns": "Writes script / script_json, system-managed columns, after the ownership check." },
+    "generate-video.js": { "from:tax_returns": "Writes video render status, system-managed columns, after the ownership check." },
+    "reap-jobs.js": {
+      "from:jobs": "Scheduled retention: clears finished job payloads.",
+      "rpc:reap_stale_jobs": "Scheduled: fails jobs whose worker died.",
+      "rpc:reconcile_failed_job_refunds": "Scheduled: refunds credits for failed jobs.",
+      "rpc:count_unrefunded_failed_jobs": "Scheduled: alerting on unrefunded credits.",
+      "rpc:assume_stale_vendor_reservations": "Scheduled: releases stuck vendor-spend reservations."
+    },
+    "report-bug.js": { "from:feedback": "Feedback is triage data users must not read or edit after sending." },
+    "save-return.js": { "from:tax_returns": "Inserts/updates parsed_data only after server-side allow-list validation; status columns are system-managed." },
+    "save-ria.js": { "from:ria_projections": "Writes validated projection inputs; same pattern as save-return." },
+    "save-scenarios.js": { "from:tax_returns": "Inserts a validated scenario set (numbers only); status is system-managed." },
+    "save-video.js": { "from:tax_returns": "Sets video_url, a system-managed column, after verifying the file exists in the caller's folder." },
+    "start-audio-job.js": {
+      "rpc:start_audio_job": "Charges a credit and creates the job in one transaction (billing control).",
+      "rpc:reap_stale_jobs": "Clears the caller's stuck job before starting a new one."
+    },
+    "stripe-webhook.js": {
+      "DYNAMIC": "Calls the fixed set of billing RPCs (apply_subscription_state, claim/finish_stripe_event, grant_pack_credits, roll_usage_period) through one helper.",
+      "from:subscriptions": "Looks up the subscription named in the signed Stripe event."
+    },
+    "sweep-orphans.js": {
+      "from:messages": "Scheduled retention: clears recipient addresses after 90 days.",
+      "from:tax_returns": "Scheduled: finds returns that still exist, to detect orphaned folders.",
+      "from:video_share_links": "Scheduled retention: clears recipient addresses after 90 days.",
+      "from:video_view_notifications": "Scheduled retention: clears recipient addresses after 90 days.",
+      "storage:audio": "Scheduled: removes folders whose return was deleted."
+    },
+    "video-viewer.js": {
+      "auth:admin": "Firm contact email for the viewer page; the visitor has no login.",
+      "from:video_share_links": "Resolves and validates the share token.",
+      "rpc:record_view_event": "Records view events for a token-authenticated visitor."
+    }
+  }
+}

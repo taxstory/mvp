@@ -1,0 +1,17 @@
+name: Security release gate
+on:
+  push:
+  pull_request:
+jobs:
+  deprecated-endpoints:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci --prefix netlify/functions --ignore-scripts
+      - run: node scripts/check-deprecated-endpoints.cjs
+      - run: node --test tests/security/*.test.cjs tests/security/*.test.mjs
+      - run: node tests/engine/run.mjs
+      - run: node --test tests/parser/*.test.mjs

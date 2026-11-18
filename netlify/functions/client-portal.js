@@ -143,7 +143,14 @@ exports.handler = async (event) => {
       // Generate a new secure token
       const siteUrl = requireSiteOrigin();   // BEFORE the token is rotated: a misconfigured site must not invalidate the old link and hand back a broken one
       const newToken = crypto.randomBytes(24).toString('base64url');
-      await supabase.from('clients').update({ portal_token: newToken }).eq('id', clientId);
+      // TS-005: only report success when the new token is really stored. Scoped to this firm, and the write is confirmed by the returned row:
+      // a failed or zero-row update must not hand back a link that does not work while the old one stays valid.
+      const { data: rotated, error: rotErr } = await supabase
+        .from('clients').update({ portal_token: newToken }).eq('id', clientId).eq('user_id', user.id).select('id, portal_token');
+      if (rotErr || !Array.isArray(rotated) || rotated.length !== 1 || rotated[0].portal_token !== newToken) {
+        console.error('[client-portal] token rotation failed:', rotErr?.message || `rows updated: ${rotated?.length ?? 0}`);
+        return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'The portal link could not be changed. The current link still works — please try again.' }) };
+      }
 
       const portalUrl  = `${siteUrl}/portal/${newToken}`;
 

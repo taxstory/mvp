@@ -4,15 +4,16 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/check-deprecated-endpoints.cjs && node tests/engine/run.mjs && vite build",
     "preview": "vite preview",
     "test": "node tests/engine/run.mjs",
     "test:engine": "node tests/engine/run.mjs",
     "test:ui": "vitest run",
     "security:guard": "node scripts/check-deprecated-endpoints.cjs",
-    "test:security": "node --test tests/security/*.test.cjs",
+    "test:security": "node --test tests/security/*.test.cjs tests/security/*.test.mjs",
     "test:parser": "node --test tests/parser/*.test.mjs",
-    "calibrate": "node scripts/calibrate-returns.mjs"
+    "calibrate": "node scripts/calibrate-returns.mjs",
+    "test:all": "node scripts/check-deprecated-endpoints.cjs && npm run test:security && node tests/engine/run.mjs && node --test tests/parser/*.test.mjs"
   },
   "dependencies": {
     "@sentry/react": "10.76.2",
