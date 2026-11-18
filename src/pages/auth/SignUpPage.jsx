@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 export default function SignUpPage() {
   const { signUp }  = useAuth();
   const navigate    = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '', firmName: '', role: 'cpa' });
+  const [form, setForm] = useState({ email: '', password: '', firmName: '', role: 'cpa' });   // no role picker: every account gets the same app; the plan (Billing) decides the tools
   const [error,    setError]   = useState('');
   const [loading,  setLoading] = useState(false);
   const [success,  setSuccess] = useState(false);
@@ -17,7 +17,12 @@ export default function SignUpPage() {
     setError('');
     setLoading(true);
     const { error } = await signUp({ email: form.email, password: form.password, role: form.role, firmName: form.firmName });
-    if (error) { setError(error.message); setLoading(false); }
+    if (error) {
+      // A network failure means the sign-in service is unreachable — say that, not the raw "Failed to fetch (host)".
+      const down = /fetch|network/i.test(error.message || '') || error.name === 'AuthRetryableFetchError';
+      setError(down ? "We can't reach our sign-in service right now. Please try again in a few minutes." : error.message);
+      setLoading(false);
+    }
     else setSuccess(true);
   }
 
@@ -48,21 +53,6 @@ export default function SignUpPage() {
           <p className="text-gray-500 text-sm mb-8">Start your free trial and join founding members who locked in early pricing.</p>
           {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-6">{error}</div>}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">I am a…</label>
-              <div className="grid grid-cols-2 gap-3">
-                {[['cpa', 'CPA'], ['ria', 'RIA']].map(([val, label]) => (
-                  <button key={val} type="button" onClick={() => setForm(f => ({ ...f, role: val }))}
-                    className={`py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
-                      form.role === val
-                        ? 'border-brand-purple bg-brand-light text-brand-purple'
-                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                    }`}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Firm Name</label>
               <input type="text" required value={form.firmName} onChange={update('firmName')}

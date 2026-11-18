@@ -1,94 +1,76 @@
 // src/pages/marketing/PricingPage.jsx
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import MarketingNav    from '../../components/marketing/MarketingNav';
 import MarketingFooter from '../../components/marketing/MarketingFooter';
+import { FEATURES } from '../../config/features';
 
-const PLANS = {
-  cpa: [
-    {
-      name: 'CPA Basic',
-      monthlyPrice: 49,
-      annualPrice:  39,
-      description:  'For solo CPAs getting started with AI client communication.',
-      projections:  100,
-      credits:      0,
-      features: [
-        '100 tax return projections per year',
-        'PII-free PDF parsing',
-        'AI-generated client scripts',
-        'Unlimited clients',
-        'Email support',
-        'SOC 2 compliant infrastructure',
-      ],
-      highlight: false,
-    },
-    {
-      name: 'CPA Pro',
-      monthlyPrice: 99,
-      annualPrice:  79,
-      description:  'For growing CPA firms that want the full video pipeline.',
-      projections:  300,
-      credits:      100,
-      features: [
-        '300 tax return projections per year',
-        '100 AI video credits per year',
-        'PII-free PDF parsing',
-        'AI-generated scripts + voiceover',
-        'Shareable client video links',
-        'Unlimited clients',
-        'Priority support',
-        'SOC 2 compliant infrastructure',
-      ],
-      highlight: true,
-      badge: 'Most Popular',
-    },
-  ],
-  ria: [
-    {
-      name: 'RIA Basic',
-      monthlyPrice: 79,
-      annualPrice:  63,
-      description:  'For RIAs who need reliable multi-year tax projection modeling.',
-      projections:  50,
-      credits:      0,
-      features: [
-        '50 multi-year projections per year',
-        '2024 federal tax brackets',
-        'LTCG, NIIT, RMD calculations',
-        'Scenario comparisons',
-        'Unlimited clients',
-        'Email support',
-        'SOC 2 compliant infrastructure',
-      ],
-      highlight: false,
-    },
-    {
-      name: 'RIA Pro',
-      monthlyPrice: 149,
-      annualPrice:  119,
-      description:  'For RIAs who need both projections and client-facing video.',
-      projections:  150,
-      credits:      25,
-      features: [
-        '150 multi-year projections per year',
-        '25 AI video credits per year',
-        '2024 federal tax brackets',
-        'LTCG, NIIT, RMD, Social Security',
-        'Full scenario modeling',
-        'Shareable client video links',
-        'Unlimited clients',
-        'Priority support',
-        'SOC 2 compliant infrastructure',
-      ],
-      highlight: true,
-      badge: 'Most Popular',
-    },
-  ],
-};
+// Plans, prices and allowances MUST match BillingSettings.jsx and TIER_LIMITS in netlify/functions/_handler.js (what is actually charged and enforced).
+// Monthly billing only: there are no annual prices in Stripe/create-checkout, so no annual toggle is offered.
+const TAX_PLANS = [
+  {
+    name: 'Tax Basic', price: 79,
+    description: 'Next-year projections from your clients\' completed returns.',
+    projections: 100, credits: 0,
+    features: [
+      '100 return projections per year',
+      'Return PDFs read in your browser — never uploaded',
+      'Plain-language client scripts',
+      '2024–2026 federal tax law, including the 2025 tax law changes',
+      'Unlimited clients',
+      'Email support',
+    ],
+    highlight: false,
+  },
+  {
+    name: 'Tax Pro', price: 149,
+    description: 'Everything in Basic, plus narrated client video walkthroughs.',
+    projections: 300, credits: 100,
+    features: [
+      '300 return projections per year',
+      '100 walkthrough credits per year',
+      'Narrated, branded client video walkthroughs',
+      'Secure share links and a client portal',
+      'A communication record for every walkthrough',
+      'Unlimited clients',
+      'Priority support',
+    ],
+    highlight: true, badge: 'Most Popular',
+  },
+];
+const PLANNING_PLANS = [
+  {
+    name: 'Investment Basic', price: 149,
+    description: 'Multi-year tax projections and scenario comparisons for planning clients.',
+    projections: 100, credits: 0,
+    features: [
+      '100 projections per year',
+      'Scenario comparisons side by side',
+      'Retirement income, RMDs, Social Security and Medicare (IRMAA)',
+      'Roth conversion analysis',
+      'Unlimited clients',
+      'Email support',
+    ],
+    highlight: false,
+  },
+  {
+    name: 'Investment Pro', price: 249,
+    description: 'Everything in Investment Basic, plus narrated walkthroughs of returns and planning options.',
+    projections: 200, credits: 50,
+    features: [
+      '200 projections per year',
+      '50 walkthrough credits per year',
+      'Narrated walkthroughs of returns and scenario comparisons',
+      'Secure share links and a client portal',
+      'A communication record for every walkthrough',
+      'Unlimited clients',
+      'Priority support',
+    ],
+    highlight: true, badge: 'Full featured',
+  },
+];
 
-function PlanCard({ plan, annual }) {
-  const price = annual ? plan.annualPrice : plan.monthlyPrice;
+function PlanCard({ plan }) {
+  const price = plan.price;
   return (
     <div className={`rounded-2xl p-8 flex flex-col ${plan.highlight ? 'bg-brand-dark text-white ring-2 ring-brand-purple' : 'bg-white border border-gray-200'}`}>
       {plan.badge && (
@@ -102,11 +84,10 @@ function PlanCard({ plan, annual }) {
       <div className="mb-6">
         <span className={`text-5xl font-bold ${plan.highlight ? 'text-white' : 'text-brand-dark'}`}>${price}</span>
         <span className={`text-sm ml-1 ${plan.highlight ? 'text-gray-400' : 'text-gray-500'}`}>/month</span>
-        {annual && <div className={`text-xs mt-1 ${plan.highlight ? 'text-purple-300' : 'text-green-600'}`}>billed annually · save ~20%</div>}
       </div>
 
       <div className={`text-xs font-semibold uppercase tracking-widest mb-3 ${plan.highlight ? 'text-purple-300' : 'text-gray-400'}`}>
-        {plan.projections} projections/yr · {plan.credits > 0 ? `${plan.credits} video credits/yr` : 'Script generation only'}
+        {plan.projections} projections/yr · {plan.credits > 0 ? `${plan.credits} walkthrough credits/yr` : 'No video walkthroughs'}
       </div>
 
       <ul className="space-y-3 mb-8 flex-1">
@@ -133,8 +114,6 @@ function PlanCard({ plan, annual }) {
 }
 
 export default function PricingPage() {
-  const [annual,   setAnnual]   = useState(false);
-  const [userType, setUserType] = useState('cpa');
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -146,45 +125,21 @@ export default function PricingPage() {
         <p className="text-gray-300 text-lg max-w-xl mx-auto">No client caps. No hidden fees. No setup costs. Start your 14-day free trial — no credit card required.</p>
       </section>
 
-      {/* Controls */}
-      <section className="bg-white py-10 px-6 border-b border-gray-100">
-        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-6">
-          {/* User type toggle */}
-          <div className="flex items-center bg-gray-100 rounded-xl p-1">
-            {['cpa', 'ria'].map(t => (
-              <button
-                key={t}
-                onClick={() => setUserType(t)}
-                className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  userType === t ? 'bg-white text-brand-dark shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {t === 'cpa' ? 'For CPAs' : 'For RIAs'}
-              </button>
-            ))}
-          </div>
-
-          {/* Billing toggle */}
-          <div className="flex items-center gap-3 text-sm">
-            <span className={annual ? 'text-gray-400' : 'font-semibold text-brand-dark'}>Monthly</span>
-            <button
-              onClick={() => setAnnual(!annual)}
-              className={`relative w-11 h-6 rounded-full transition-colors ${annual ? 'bg-brand-purple' : 'bg-gray-300'}`}
-            >
-              <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${annual ? 'translate-x-5' : ''}`} />
-            </button>
-            <span className={annual ? 'font-semibold text-brand-dark' : 'text-gray-400'}>Annual <span className="text-green-600 font-semibold">Save ~20%</span></span>
-          </div>
-        </div>
-      </section>
-
       {/* Plans */}
       <section className="py-16 px-6 bg-gray-50 flex-1">
+        <h2 className="max-w-4xl mx-auto font-serif text-2xl font-bold text-brand-dark mb-6">Tax return projections and walkthroughs</h2>
         <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
-          {PLANS[userType].map(plan => (
-            <PlanCard key={plan.name} plan={plan} annual={annual} />
-          ))}
+          {TAX_PLANS.map(plan => <PlanCard key={plan.name} plan={plan} />)}
         </div>
+        {/* Planning plans are sold only once the planning tools are switched on (VITE_ENABLE_PLANNING) — never advertise hidden features. */}
+        {FEATURES.planningModules && (
+          <>
+            <h2 className="max-w-4xl mx-auto font-serif text-2xl font-bold text-brand-dark mt-14 mb-6">Tax planning for financial advisors</h2>
+            <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
+              {PLANNING_PLANS.map(plan => <PlanCard key={plan.name} plan={plan} />)}
+            </div>
+          </>
+        )}
 
         {/* Credit model explainer */}
         <div className="max-w-4xl mx-auto mt-12 bg-white rounded-2xl p-8 border border-gray-200">
@@ -192,11 +147,11 @@ export default function PricingPage() {
           <div className="grid md:grid-cols-2 gap-6 text-sm text-gray-600">
             <div>
               <p className="font-semibold text-brand-dark mb-1">Projections</p>
-              <p>Each tax return you parse and each multi-year RIA projection you run counts as one projection. Credits reset annually — unused projections don't roll over.</p>
+              <p>Each return you import or enter, and each multi-year projection you run, counts as one projection. Allowances reset each year on your subscription date — unused projections don't roll over.</p>
             </div>
             <div>
-              <p className="font-semibold text-brand-dark mb-1">Video Credits (Pro tiers only)</p>
-              <p>Each AI-generated client video uses one credit. Credits are annual and don't roll over. You can always generate scripts without using a credit — video rendering uses the credit.</p>
+              <p className="font-semibold text-brand-dark mb-1">Walkthrough credits (Pro plans)</p>
+              <p>Each narrated walkthrough uses one credit when its voiceover is made. Scripts are always free to generate and review. Plan credits reset yearly; extra credit packs never expire.</p>
             </div>
           </div>
         </div>

@@ -15,7 +15,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     const { error } = await signIn({ email, password });
-    if (error) { setError(error.message); setLoading(false); }
+    if (error) { setError(/fetch|network/i.test(error.message || '') ? "We can't reach our sign-in service right now. Please try again in a few minutes." : error.message); setLoading(false); }
     else navigate('/dashboard');
   }
 

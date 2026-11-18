@@ -6,6 +6,9 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { identifierError } from '../../utils/pii';
 
+// Stored values stay 'cpa' / 'ria' (database); only the words shown change.
+const TYPE_LABEL = { cpa: 'Tax', ria: 'Planning', all: 'All' };
+const typeLabel = t => TYPE_LABEL[t] || t;
 const EMPTY_FORM = { name:'', email:'', phone:'', type:'cpa', firm_name:'', notes:'' };
 
 import { useConfirm } from '../../components/ui/ConfirmProvider';
@@ -199,15 +202,15 @@ export default function ClientsPage() {
   if (view === 'list') return (
     <div className="ts-page">
       <div className="ts-hrow">
-        <div><div className="ts-page-title">Client list</div><div className="ts-page-sub">All clients across CPA and RIA</div></div>
+        <div><div className="ts-page-title">Client list</div><div className="ts-page-sub">Everyone you prepare returns or plans for</div></div>
         <button className="ts-btn ts-btn-primary" onClick={openNew}>+ Add client</button>
       </div>
 
       <div className="ts-g4" style={{marginBottom:'16px'}}>
         {[
           { l:'Total clients',    v: loading ? '—' : clients.length },
-          { l:'CPA clients',      v: loading ? '—' : cpaCnt },
-          { l:'RIA clients',      v: loading ? '—' : riaCnt },
+          { l:'Tax clients',      v: loading ? '—' : cpaCnt },
+          { l:'Planning clients', v: loading ? '—' : riaCnt },
           { l:'Active this month',v: loading ? '—' : activeCnt },
         ].map(k => (
           <div className="ts-kpi" key={k.l}><div className="ts-kpi-label">{k.l}</div><div className="ts-kpi-val">{k.v}</div></div>
@@ -219,7 +222,7 @@ export default function ClientsPage() {
           <div style={{display:'flex',gap:'6px'}}>
             {['all','cpa','ria'].map(t => (
               <button key={t} onClick={()=>setFilterType(t)} className={`ts-btn ts-btn-sm ${filterType===t?'ts-btn-primary':'ts-btn-secondary'}`}>
-                {t==='all'?'All':t.toUpperCase()}
+                {typeLabel(t)}
               </button>
             ))}
           </div>
@@ -273,7 +276,7 @@ export default function ClientsPage() {
                     <div className="ts-rn" style={{cursor:'pointer',color:'var(--purple)'}} onClick={()=>openDetail(c)}>{c.name}</div>
                     {c.firm_name && <div className="ts-rm">{c.firm_name}</div>}
                   </td>
-                  <td><span className={`ts-pill ${c.type==='ria'?'ts-p-amber':'ts-p-dark'}`}>{c.type.toUpperCase()}</span></td>
+                  <td><span className={`ts-pill ${c.type==='ria'?'ts-p-amber':'ts-p-dark'}`}>{typeLabel(c.type)}</span></td>
                   <td style={{fontWeight:600}}>{c.projectionCount}</td>
                   <td style={{fontWeight:600}}>{c.videoCount}</td>
                   <td style={{fontSize:'12px',color:'var(--muted)'}}>{fmtDate(c.lastActivity)}</td>
@@ -319,8 +322,8 @@ export default function ClientsPage() {
           <div className="ts-input-row">
             <div className="ts-frow"><label className="ts-fl">Type</label>
               <div className="ts-seg">
-                <div className={`ts-seg-btn${form.type==='cpa'?' sel':''}`} onClick={()=>setForm(f=>({...f,type:'cpa'}))}>CPA</div>
-                <div className={`ts-seg-btn${form.type==='ria'?' sel':''}`} onClick={()=>setForm(f=>({...f,type:'ria'}))}>RIA</div>
+                <div className={`ts-seg-btn${form.type==='cpa'?' sel':''}`} onClick={()=>setForm(f=>({...f,type:'cpa'}))}>Tax</div>
+                <div className={`ts-seg-btn${form.type==='ria'?' sel':''}`} onClick={()=>setForm(f=>({...f,type:'ria'}))}>Planning</div>
               </div>
             </div>
             <div className="ts-frow"><label className="ts-fl">Firm name <span>optional</span></label><input type="text" value={form.firm_name} onChange={upd('firm_name')} placeholder="Client's firm or employer" /></div>
@@ -358,7 +361,7 @@ export default function ClientsPage() {
           <div>
             <div className="ts-page-title">{c.name}</div>
             <div className="ts-page-sub">
-              <span className={`ts-pill ${c.type==='ria'?'ts-p-amber':'ts-p-dark'}`} style={{marginRight:'8px'}}>{c.type.toUpperCase()}</span>
+              <span className={`ts-pill ${c.type==='ria'?'ts-p-amber':'ts-p-dark'}`} style={{marginRight:'8px'}}>{typeLabel(c.type)}</span>
               {c.firm_name && `${c.firm_name} · `}Added {new Date(c.created_at).toLocaleDateString()}
             </div>
           </div>
@@ -423,7 +426,7 @@ export default function ClientsPage() {
       <div className="ts-g2">
         <div className="ts-card">
           <div className="ts-card-title">{labelsOnly ? 'Details' : 'Contact information'}</div>
-          {[...(labelsOnly ? [] : [['Email',c.email||'—'],['Phone',c.phone||'—']]),['Type',c.type.toUpperCase()],['Firm',c.firm_name||'—']].map(([k,v])=>(
+          {[...(labelsOnly ? [] : [['Email',c.email||'—'],['Phone',c.phone||'—']]),['Type',typeLabel(c.type)],['Firm',c.firm_name||'—']].map(([k,v])=>(
             <div key={k} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--color-purple-faint)',fontSize:'13px'}}>
               <span style={{color:'var(--muted)'}}>{k}</span>
               <span style={{fontWeight:500,color:'var(--dark)'}}>{v}</span>

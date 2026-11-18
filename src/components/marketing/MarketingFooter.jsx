@@ -45,7 +45,7 @@ export default function MarketingFooter() {
 
         <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-gray-500">© {new Date().getFullYear()} Lakeside Advisory Group, LLC. All rights reserved.</p>
-          <p className="text-xs text-gray-500">Built for CPAs and RIAs who value their clients' time.</p>
+          <p className="text-xs text-gray-500">Built for tax and financial professionals who value their clients' time.</p>
         </div>
       </div>
     </footer>

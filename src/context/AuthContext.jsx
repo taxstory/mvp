@@ -7,14 +7,20 @@ export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [backendDown, setBackendDown] = useState(false);   // the sign-in service could not be reached
 
   useEffect(() => {
+    // If the sign-in service cannot be reached (project paused, wrong URL, network down), getSession keeps retrying a token refresh and never
+    // settles — every page then rendered NOTHING. After 8 seconds we stop waiting and show the app with a clear notice instead.
+    const giveUp = setTimeout(() => { setBackendDown(true); setLoading(false); }, 8000);
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      clearTimeout(giveUp);
+      if (error) { console.error('[auth] session check failed:', error.message); setBackendDown(/fetch|network/i.test(error.message || '')); }
       setUser(session?.user ?? null);
       if (session?.user) fetchProfile(session.user.id).catch(e => console.error('[auth] profile read failed:', e.message));   // fetchProfile now throws; never leave it unhandled
       else setLoading(false);
-    });
+    }).catch(e => { clearTimeout(giveUp); console.error('[auth] session check failed:', e.message); setBackendDown(true); setLoading(false); });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -23,7 +29,7 @@ export function AuthProvider({ children }) {
       else { setProfile(null); setLoading(false); }
     });
 
-    return () => subscription.unsubscribe();
+    return () => { clearTimeout(giveUp); subscription.unsubscribe(); };
   }, []);
 
   async function fetchProfile(userId) {
@@ -67,7 +73,7 @@ export function AuthProvider({ children }) {
   }
 
   const refreshProfile = () => user ? fetchProfile(user.id) : Promise.resolve(null);
-  const value = { user, profile, loading, refreshProfile, signUp, signIn, signOut, resetPassword };
+  const value = { user, profile, loading, backendDown, refreshProfile, signUp, signIn, signOut, resetPassword };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

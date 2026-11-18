@@ -2,54 +2,55 @@
 import { Link } from 'react-router-dom';
 import MarketingNav    from '../../components/marketing/MarketingNav';
 import MarketingFooter from '../../components/marketing/MarketingFooter';
+import { FEATURES } from '../../config/features';
 
 const STATS = [
   { value: '60%',     label: 'Fewer client calls after tax season' },
   { value: '90 sec',  label: 'To generate a personalized client video' },
-  { value: '40 hrs',  label: 'Saved per CPA per tax season' },
+  { value: '40 hrs',  label: 'Saved per firm per tax season' },
 ];
 
-const CPA_FEATURES = [
+const RETURN_FEATURES = [
   {
     icon: '📄',
-    title: 'Upload Any Tax Return',
-    desc: 'Drag and drop a completed PDF. TaxStory extracts the financial data that matters — and nothing else.',
+    title: 'Start From the Completed Return',
+    desc: 'Drop in the client copy. It is read in your browser, never uploaded, and only the figures are kept — no names, no SSNs.',
   },
   {
     icon: '🤖',
-    title: 'AI Generates the Script',
-    desc: 'Claude writes a warm, plain-English walkthrough of the return in your client\'s voice — not tax-speak.',
+    title: 'A Plain-English Script, Checked',
+    desc: 'TaxStory writes a walkthrough of the return in plain English. Every amount comes from the return, and you review it before anything is sent.',
   },
   {
     icon: '🎬',
-    title: 'Video Ready in 90 Seconds',
-    desc: 'A personalized 2–3 minute video your client can watch on their phone, at their own pace.',
+    title: 'A Narrated Video Your Client Can Rewatch',
+    desc: 'A short, branded walkthrough your client watches on their phone, at their own pace — with a record of when it was viewed.',
   },
 ];
 
-const RIA_FEATURES = [
+const PLANNING_FEATURES = [
   {
     icon: '📊',
     title: 'Multi-Year Projections',
-    desc: 'Model 5–20 years of federal tax liability with 2024 brackets, LTCG rates, NIIT, and RMD logic built in.',
+    desc: 'Project federal tax years ahead from current law, with capital gains rates, NIIT, required distributions, Social Security and Medicare premiums built in.',
   },
   {
     icon: '⚡️',
     title: 'Scenario Comparisons',
-    desc: 'Run Roth conversions, tax-loss harvesting, municipal bond shifts, and RMD strategies side by side.',
+    desc: 'Compare Roth conversions, retirement income and other what-ifs side by side, priced on the full return.',
   },
   {
     icon: '📈',
-    title: 'Client-Ready Charts',
-    desc: 'Export projection charts your clients can understand — no spreadsheets, no tax jargon.',
+    title: 'Explained, Not Just Calculated',
+    desc: 'Turn the option you recommend into a narrated walkthrough your client can follow — clearly labelled as an estimate.',
   },
 ];
 
 // NYCPA & AICPA removed — replaced with "Built for Professionals"
 const TRUST_SIGNALS = [
-  { icon: '🔒', label: 'PII-Free by Design',  desc: 'Personal identifiers are never extracted from tax returns — not scrubbed, never collected.' },
+  { icon: '🔒', label: 'PII-Free by Design',  desc: 'Return PDFs are read in your browser and never uploaded. Names and SSNs are never collected.' },
   { icon: '✅', label: 'SOC 2 Compliance',     desc: 'Active SOC 2 Type I compliance process underway. Policy library and controls fully documented.' },
-  { icon: '🛠️', label: 'Built for Professionals', desc: 'Designed from the ground up around real CPA and RIA workflows — not adapted from a generic tool.' },
+  { icon: '🛠️', label: 'Built for Professionals', desc: 'Designed around how tax and financial professionals actually work with clients — not adapted from a generic tool.' },
 ];
 
 export default function LandingPage() {
@@ -61,16 +62,16 @@ export default function LandingPage() {
       <section className="bg-brand-dark text-white py-24 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <span className="inline-block bg-brand-purple/30 text-purple-200 text-xs font-semibold px-4 py-1.5 rounded-full mb-6 tracking-wide uppercase">
-            🎬 The First AI-Powered Video Platform for Tax Professionals
+            🎬 Client video walkthroughs for tax and financial professionals
           </span>
           <h1 className="font-serif text-5xl md:text-6xl font-bold leading-tight mb-6">
             Stop Explaining<br />Tax Returns.
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-4">
-            Let AI do it for you. Automatically turn completed returns into personalized client videos in 90 seconds.
+            Turn completed returns into personalized, narrated client walkthroughs — in minutes, not meetings.
           </p>
           <p className="text-base text-gray-400 max-w-xl mx-auto mb-10">
-            Plus: year-round multi-year tax projections and scenario modeling built for RIAs.
+            Plus next-year projections, so the conversation keeps going after the return is filed.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/signup" className="bg-brand-purple hover:bg-purple-600 text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors">
@@ -96,16 +97,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CPA Features ── */}
+      {/* ── Return walkthrough features ── */}
       <section className="py-20 px-6 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
-            <span className="text-xs font-semibold text-brand-purple uppercase tracking-widest">For CPAs</span>
+            <span className="text-xs font-semibold text-brand-purple uppercase tracking-widest">After the return</span>
             <h2 className="font-serif text-4xl font-bold text-brand-dark mt-2">Your clients finally understand their return</h2>
-            <p className="text-gray-500 mt-4 max-w-xl mx-auto">Upload a completed tax return PDF and TaxStory generates a personalized video walkthrough — explained in plain English, delivered in 90 seconds.</p>
+            <p className="text-gray-500 mt-4 max-w-xl mx-auto">Start from the completed return and TaxStory builds a personalized walkthrough in plain English — reviewed by you, watched by your client on their own time.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            {CPA_FEATURES.map(f => (
+            {RETURN_FEATURES.map(f => (
               <div key={f.title} className="bg-brand-light rounded-2xl p-8">
                 <div className="text-4xl mb-4">{f.icon}</div>
                 <h3 className="font-semibold text-brand-dark text-lg mb-2">{f.title}</h3>
@@ -116,16 +117,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── RIA Features ── */}
+      {/* ── Planning features (shown only when the planning tools are on) ── */}
+      {FEATURES.planningModules && (
       <section className="py-20 px-6 bg-gray-50">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
-            <span className="text-xs font-semibold text-teal-600 uppercase tracking-widest">For RIAs</span>
+            <span className="text-xs font-semibold text-teal-600 uppercase tracking-widest">Year-round planning</span>
             <h2 className="font-serif text-4xl font-bold text-brand-dark mt-2">Multi-year tax projections that actually land</h2>
-            <p className="text-gray-500 mt-4 max-w-xl mx-auto">Model Roth conversions, RMDs, tax-loss harvesting, and income scenarios — with real federal brackets and side-by-side comparisons your clients can follow.</p>
+            <p className="text-gray-500 mt-4 max-w-xl mx-auto">Model Roth conversions, required distributions and income scenarios under current federal law — side by side, in terms your clients can follow.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            {RIA_FEATURES.map(f => (
+            {PLANNING_FEATURES.map(f => (
               <div key={f.title} className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
                 <div className="text-4xl mb-4">{f.icon}</div>
                 <h3 className="font-semibold text-brand-dark text-lg mb-2">{f.title}</h3>
@@ -135,6 +137,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── Trust Signals ── */}
       <section className="py-20 px-6 bg-white">

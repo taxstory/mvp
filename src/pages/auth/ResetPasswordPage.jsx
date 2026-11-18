@@ -13,7 +13,7 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setLoading(true);
     const { error } = await resetPassword(email);
-    if (error) { setError(error.message); setLoading(false); }
+    if (error) { setError(/fetch|network/i.test(error.message || '') ? "We can't reach our sign-in service right now. Please try again in a few minutes." : error.message); setLoading(false); }
     else setSent(true);
   }
 

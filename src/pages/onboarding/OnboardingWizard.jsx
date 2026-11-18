@@ -219,7 +219,7 @@ export default function OnboardingWizard() {
 
               <div style={{ marginBottom:16 }}>
                 <label style={s.label}>Firm or practice name</label>
-                <input style={s.input} placeholder="e.g. Chen & Associates CPA" value={firmName} onChange={e => setFirmName(e.target.value)} autoFocus />
+                <input style={s.input} placeholder="e.g. Chen & Associates" value={firmName} onChange={e => setFirmName(e.target.value)} autoFocus />
               </div>
 
               <div style={{ marginBottom:20 }}>

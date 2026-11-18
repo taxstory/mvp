@@ -209,8 +209,8 @@ export default function Dashboard() {
             <div className="ts-card-title">Quick actions</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
               {[
-                {to:'/cpa/projections', icon:'📊', label:'CPA projection',   sub:'New analysis'},
-                ...(FEATURES.planningModules ? [{to:'/ria/projections', icon:'📈', label:'RIA projection',    sub:'Multi-year scenario'}] : []),
+                {to:'/cpa/projections', icon:'📊', label:'Tax projection',   sub:'New analysis'},
+                ...(FEATURES.planningModules ? [{to:'/ria/projections', icon:'📈', label:'Investment projection',    sub:'Multi-year scenario'}] : []),
                 {to:'/cpa/video',       icon:'🎬', label:'Generate walkthrough',   sub:`${credits} credits left`},
                 {to:'/clients',         icon:'👤', label:'Add client',       sub:'New client record'},
               ].map(a => (

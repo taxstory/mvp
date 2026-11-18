@@ -53,9 +53,22 @@ function PrivateRoute({ children, allowedRoles }) {
   return children;
 }
 
+// Shown above every page when the sign-in service (Supabase) cannot be reached, instead of a blank screen.
+function BackendNotice() {
+  const { backendDown } = useAuth();
+  if (!backendDown) return null;
+  return (
+    <div role="alert" style={{ background:'#FEF3C7', color:'#78350F', padding:'10px 16px', fontSize:13, textAlign:'center' }}>
+      TaxStory can't reach its sign-in service right now, so signing in won't work. Please try again in a few minutes.
+    </div>
+  );
+}
+
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return (   // was `null`: a blank page while the session check ran (forever, if the sign-in service was unreachable)
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--color-muted)', fontSize:13 }}>Loading…</div>
+  );
   if (user) return <Navigate to="/dashboard" replace />;
   return children;
 }
@@ -72,6 +85,7 @@ export default function App() {
       <ToastProvider>
       <ConfirmProvider>
       <BrowserRouter>
+        <BackendNotice />
         <Routes>
           {/* Marketing */}
           <Route path="/"             element={<LandingPage />} />

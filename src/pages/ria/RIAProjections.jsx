@@ -176,7 +176,7 @@ export default function RIAProjections() {
       </div>
       <div className="ts-g4">
         {[
-          { l:'RIA clients',     v: loading ? '—' : projections.length },
+          { l:'Planning clients',     v: loading ? '—' : projections.length },
           { l:'Avg lifetime tax',v: loading ? '—' : projections.length ? fmt(projections.reduce((s,p)=>s+(p.lifetime_tax_estimate||0),0)/projections.length) : '—' },
           { l:'Scenarios run',   v: loading ? '—' : projections.length },
           { l:'Avg horizon',     v: loading ? '—' : projections.length ? `${Math.round(projections.reduce((s,p)=>s+((p.retirement_age||65)-(p.current_age||55)),0)/projections.length)} yr` : '—' },
@@ -189,7 +189,7 @@ export default function RIAProjections() {
         : projections.length === 0 ? (
           <div style={{textAlign:'center',padding:'40px'}}>
             <div style={{fontSize:'32px',marginBottom:'10px'}}>📈</div>
-            <div style={{fontSize:'14px',color:'var(--muted)',marginBottom:'16px'}}>No RIA projections yet.</div>
+            <div style={{fontSize:'14px',color:'var(--muted)',marginBottom:'16px'}}>No investment projections yet.</div>
             <button className="ts-btn ts-btn-primary" onClick={()=>setView('new')}>+ Build first projection</button>
           </div>
         ) : (
@@ -369,7 +369,7 @@ export default function RIAProjections() {
         <div style={{display:'flex',alignItems:'center',gap:'14px'}}>
           <div className="ts-av-lg">{(s.clients?.name||s.client_name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
           <div>
-            <div className="ts-page-title">{s.clients?.name || s.client_name || 'RIA Client'}</div>
+            <div className="ts-page-title">{s.clients?.name || s.client_name || 'Planning client'}</div>
             <div className="ts-page-sub">Age {s.current_age} → {s.retirement_age} · {s.filing_status} · {yearsTo} yr horizon</div>
           </div>
         </div>

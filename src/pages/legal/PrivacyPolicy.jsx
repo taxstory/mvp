@@ -14,7 +14,7 @@ export default function PrivacyPolicy() {
         <div className="prose prose-gray max-w-none space-y-8 text-gray-700 text-sm leading-relaxed">
           <section>
             <h2 className="font-semibold text-brand-dark text-xl mb-3">1. Who we are</h2>
-            <p>TaxStory is operated by Lakeside Advisory Group, LLC. We provide an AI-powered tax client communication platform for CPAs and Registered Investment Advisors. Our website is tellmytaxstory.com.</p>
+            <p>TaxStory is operated by Lakeside Advisory Group, LLC. We provide an AI-powered tax client communication platform for tax and financial professionals. Our website is tellmytaxstory.com.</p>
           </section>
           <section>
             <h2 className="font-semibold text-brand-dark text-xl mb-3">2. PII-Free by Design</h2>
