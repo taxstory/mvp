@@ -39,7 +39,7 @@ export default function ClientPortal() {
   if (state === 'loading') return (
     <PortalShell>
       <div style={{ textAlign:'center', padding:64 }}>
-        <div style={{ fontSize:32, marginBottom:12 }}>⏳</div>
+        <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom:12 }}><Icon name="hourglass" size={24} /></div>
         <div style={{ fontSize:14, color:'var(--color-muted)' }}>Loading your walkthroughs…</div>
       </div>
     </PortalShell>
@@ -180,9 +180,9 @@ function WalkthroughCard({ walkthrough: w }) {
   const hasViewer = w.viewerToken && w.hasVideo;
   const statusLabel = {
     audio_ready:  { icon:'video', text:'Ready to watch', color:'var(--color-green-dark)', bg:'var(--color-green-light)' },
-    script_ready: { icon:'note', text:'In progress',    color:'var(--color-amber-dark)', bg:'var(--color-amber-light)' },
-    parsed:       { icon:'projections', text:'Processing',     color:'var(--color-blue)', bg:'var(--color-blue-light)' },
-  }[w.status] || { icon:'⏳', text:'Pending', color:'var(--color-muted)', bg:'var(--color-gray-light)' };
+    video_ready:  { icon:'video', text:'Ready to watch', color:'var(--color-green-dark)', bg:'var(--color-green-light)' },
+    script_ready: { icon:'note',  text:'In progress',    color:'var(--color-amber-dark)', bg:'var(--color-amber-light)' },
+  }[w.status] || { icon:'calendar', text:'Coming soon', color:'var(--color-muted)', bg:'var(--color-gray-light)' };
 
   return (
     <div style={{ background:'#fff', border:'1px solid var(--color-border)', borderRadius:16,
@@ -214,13 +214,13 @@ function WalkthroughCard({ walkthrough: w }) {
               justifyContent:'center', gap:7, padding:'11px 16px',
               background:'var(--color-purple)', color:'#fff', borderRadius:10,
               textDecoration:'none', fontSize:13, fontWeight:600 }}>
-            ▶ Watch walkthrough
+            <Icon name="play" size={14} /> Watch walkthrough
           </Link>
         ) : (
           <div style={{ flex:1, minWidth:160, display:'flex', alignItems:'center',
             justifyContent:'center', padding:'11px 16px',
             background:'var(--color-bg)', color:'var(--color-muted-light)', borderRadius:10, fontSize:13 }}>
-            Audio walkthrough only
+            {w.hasVideo ? 'Ask your advisor for the link' : 'No walkthrough yet'}
           </div>
         )}
 

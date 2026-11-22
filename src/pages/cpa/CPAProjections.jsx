@@ -52,6 +52,9 @@ function cleanFigures(obj) {
   return out;
 }
 const FILING_STATUSES = ['Single', 'Married filing jointly', 'Married filing separately', 'Head of household', 'Qualifying surviving spouse'];
+// Short labels for tables (the list used to show only the last word: "jointly", "household").
+const FILING_SHORT = { 'single': 'Single', 'married filing jointly': 'MFJ', 'married filing separately': 'MFS', 'head of household': 'HOH', 'qualifying surviving spouse': 'QSS', 'qualifying widow(er)': 'QSS' };
+const filingShort = s => (s && (FILING_SHORT[String(s).toLowerCase()] || String(s).toUpperCase().slice(0, 4))) || '—';
 
 // ── PDF Summary Export ────────────────────────────────────────────────────────
 // Generates a branded one-page HTML document and triggers print-to-PDF.
@@ -544,7 +547,7 @@ export default function CPAProjections() {
                       <div className="ts-rm">{r.file_name}</div>
                     </td>
                     <td>{r.tax_year || p.tax_year || '—'}</td>
-                    <td><span className="ts-pill ts-p-gray">{p.filing_status?.split(' ').slice(-1)[0] || '—'}</span></td>
+                    <td><span className="ts-pill ts-p-gray" title={p.filing_status || ''}>{filingShort(p.filing_status)}</span></td>
                     <td style={{fontWeight:700}}>{fmt(p.federal_tax)}</td>
                     <td>{p.effective_rate ? <span className="ts-pill ts-p-green">{p.effective_rate}%</span> : '—'}</td>
                     <td style={{display:'flex',gap:'6px'}}>

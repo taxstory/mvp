@@ -62,7 +62,7 @@
       "storage:audio": "Uploads the generated PDF to the caller's folder."
     },
     "generate-script.js": { "from:tax_returns": "Writes script / script_json, system-managed columns, after the ownership check." },
-    "generate-video.js": { "from:tax_returns": "Writes video render status, system-managed columns, after the ownership check." },
+    
     "reap-jobs.js": {
       "from:jobs": "Scheduled retention: clears finished job payloads.",
       "rpc:reap_stale_jobs": "Scheduled: fails jobs whose worker died.",

@@ -81,7 +81,7 @@ export default function VideoViewer() {
   if (state === 'loading') return (
     <ViewerShell brand={brand}>
       <div style={{ textAlign:'center', padding:48 }}>
-        <div style={{ fontSize:32, marginBottom:12 }}>⏳</div>
+        <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom:12 }}><Icon name="hourglass" size={24} /></div>
         <div style={{ fontSize:15, color:'var(--color-muted)' }}>Loading your walkthrough…</div>
       </div>
     </ViewerShell>
@@ -228,7 +228,7 @@ export default function VideoViewer() {
           </div>
         ) : (
           <div style={{ background:'var(--color-bg)', borderRadius:14, padding:32, textAlign:'center', marginBottom:20, border:'1px solid var(--color-border)' }}>
-            <div style={{ fontSize:40, marginBottom:10 }}>⏳</div>
+            <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom:10 }}><Icon name="hourglass" size={24} /></div>
             <div style={{ fontSize:14, color:'var(--color-muted)' }}>Your walkthrough is still being generated. Check back in a few minutes.</div>
           </div>
         )}

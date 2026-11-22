@@ -14,10 +14,10 @@ import { Icon } from './Icon';
 
 // NAV is a function of live state so badges can never disagree with Billing or the data.
 // The only badges are live ones: client count, unread messages, and the account's actual plan on Billing.
-function buildNav({ isPaid, planLabel, unreadCount, clientCount }) {
+function buildNav({ isPaid, planLabel, unreadCount, clientCount, ended }) {
   const planBadge = isPaid
     ? { badge: planLabel || 'Pro', badgeClass: 'ts-b-pro' }
-    : { badge: 'Trial', badgeClass: 'ts-b-new' };
+    : ended ? { badge: 'Ended', badgeClass: 'ts-b-new' } : { badge: 'Trial', badgeClass: 'ts-b-new' };
   const count = n => (n > 0 ? { badge: String(n), badgeClass: 'ts-b-num' } : {});
 
   return [
@@ -91,7 +91,7 @@ export default function AppLayout() {
 
   const isPaid    = isActive === true;
   const planLabel = PLAN_LABELS[tier] || null;
-  const NAV = buildNav({ isPaid, planLabel, unreadCount, clientCount });
+  const NAV = buildNav({ isPaid, planLabel, unreadCount, clientCount, ended: tier === 'expired' });
 
   const initials = profile?.firm_name
     ? profile.firm_name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
@@ -99,7 +99,7 @@ export default function AppLayout() {
 
   // Single source of truth for the account-chip status text —
   // matches exactly what Billing page would show for the same state.
-  const statusText = subLoading ? '…' : isPaid ? (planLabel || 'Pro') : 'Free Trial';
+  const statusText = subLoading ? '…' : isPaid ? (planLabel || 'Pro') : tier === 'expired' ? 'Trial ended' : 'Free Trial';
 
   return (
     <>

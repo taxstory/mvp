@@ -23,9 +23,6 @@ const Dashboard = lazyPage(() => import('./pages/app/Dashboard'));
 const ClientsPage = lazyPage(() => import('./pages/app/ClientsPage'));
 const BillingSettings = lazyPage(() => import('./pages/app/BillingSettings'));
 const MessagesPage = lazyPage(() => import('./pages/app/MessagesPage'));
-const DocumentsPage = lazyPage(() => import('./pages/app/DocumentsPage'));
-const ClientIntakePage = lazyPage(() => import('./pages/app/ClientIntakePage'));
-const ReportsPage = lazyPage(() => import('./pages/app/ReportsPage'));
 const HelpPage = lazyPage(() => import('./pages/app/HelpPage'));
 const SettingsPage = lazyPage(() => import('./pages/app/SettingsPage'));
 const CPAProjections = lazyPage(() => import('./pages/cpa/CPAProjections'));
@@ -154,9 +151,6 @@ export default function App() {
             <Route path="/clients"         element={<PrivateRoute><ClientsPage /></PrivateRoute>} />
             <Route path="/billing"         element={<PrivateRoute><BillingSettings /></PrivateRoute>} />
             <Route path="/messages"        element={<PrivateRoute><MessagesPage /></PrivateRoute>} />
-            <Route path="/documents"       element={<PrivateRoute><DocumentsPage /></PrivateRoute>} />
-            <Route path="/intake"          element={<PrivateRoute><ClientIntakePage /></PrivateRoute>} />
-            <Route path="/reports"         element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
             <Route path="/help"            element={<PrivateRoute><HelpPage /></PrivateRoute>} />
             <Route path="/calibrate"       element={<PrivateRoute><CalibratePage /></PrivateRoute>} />   {/* internal: reader calibration, not in the nav */}
             <Route path="/settings"        element={<PrivateRoute><SettingsPage /></PrivateRoute>} />

@@ -15,7 +15,7 @@ import {
   NotebookPen, CircleCheck, FileText, Link2, TriangleAlert, Ticket, Image, ClipboardList, CalendarClock, Trash2, Lock,
   Building2, Rocket, FolderOpen, CloudUpload, House, UserRound, Briefcase, Zap, Pill, Building, PenLine, Mic, Share2,
   Mail, RefreshCw, Save, Flag, CircleX, Inbox, Phone, Globe, Bot, Wrench, ShieldCheck, Calculator, Palette, Target,
-  Download, CircleHelp, LayoutGrid, Send, Repeat, Activity, Hand, Info, Star,
+  Download, CircleHelp, LayoutGrid, Send, Repeat, Activity, Hand, Info, Star, Play, Hourglass,
 } from 'lucide-react';
 
 export const ICONS = {
@@ -32,7 +32,7 @@ export const ICONS = {
   edit: PenLine, share: Share2, send: Send, refresh: RefreshCw, save: Save, delete: Trash2, launch: Rocket, convert: Repeat,
   // states
   success: CircleCheck, warning: TriangleAlert, error: CircleX, lock: Lock, shield: ShieldCheck, flag: Flag, zap: Zap,
-  inbox: Inbox, tools: Wrench, star: Star,
+  inbox: Inbox, tools: Wrench, star: Star, play: Play, hourglass: Hourglass,
 };
 
 export function Icon({ name, size = 16, strokeWidth = 2, className, style, title }) {

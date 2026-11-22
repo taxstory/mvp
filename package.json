@@ -6,10 +6,7 @@
     "dev": "vite",
     "build": "node scripts/check-deprecated-endpoints.cjs && node tests/engine/run.mjs && vite build",
     "preview": "vite preview",
-    "test": "node tests/engine/run.mjs",
-    "test:engine": "node tests/engine/run.mjs",
-    "test:ui": "vitest run",
-    "security:guard": "node scripts/check-deprecated-endpoints.cjs",
+    "test": "npm run test:all",
     "test:security": "node --test tests/security/*.test.cjs tests/security/*.test.mjs",
     "test:parser": "node --test tests/parser/*.test.mjs",
     "calibrate": "node scripts/calibrate-returns.mjs",
@@ -24,20 +21,14 @@
     "posthog-js": "1.438.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.28.0",
-    "remotion": "^4.0.250"
+    "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/react": "^16.0.1",
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.20",
-    "axe-core": "^4.14.0",
-    "jsdom": "^25.0.1",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
-    "vite": "^5.4.10",
-    "vitest": "^2.1.4"
+    "vite": "^5.4.10"
   },
   "engines": {
     "node": ">=20"

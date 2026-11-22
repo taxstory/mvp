@@ -1,6 +1,6 @@
 // src/pages/cpa/CPAVideoGenerator.jsx
 // Option A video pipeline: structured script → per-segment TTS → Remotion composition
-// Supports both Lambda render (if configured) and client-side preview
+// Video is rendered in the browser (VideoRenderer)
 
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -268,7 +268,7 @@ export default function CPAVideoGenerator() {
         setFirmColorForVideo(firmProfile.brand_color || '#6B5CE7');
       }
 
-      // Step 3: Trigger video assembly (Lambda or client-side)
+      // Step 3: Get the composition props for the in-browser render
       setCurrentStep('video');
       const vr = await fetch('/.netlify/functions/generate-video', {
         method: 'POST', headers,
@@ -739,13 +739,6 @@ export default function CPAVideoGenerator() {
             <div className="ts-card-title"><IconLabel icon="video">Video walkthrough</IconLabel>
               <span className="ts-card-sub">renders in your browser · fastest in Chrome or Edge</span>
             </div>
-            {videoProps?.mode === 'lambda' ? (
-              <div style={{ fontSize: '13px', color: 'var(--dark)' }}>
-                ⏳ Rendering on AWS Lambda… Render ID: <code style={{ fontSize: '11px' }}>{videoProps.renderId}</code>
-                <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '6px' }}>Refresh in 60 seconds to see the completed walkthrough.</div>
-              </div>
-            ) : (
-              <>
               <VideoRenderer
                 segments={segments}
                 parsedData={selectedReturnData}
@@ -775,8 +768,6 @@ export default function CPAVideoGenerator() {
                   </button>
                 </div>
               )}
-              </>
-            )}
           </div>
         )}
 

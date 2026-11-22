@@ -36,6 +36,11 @@ const PLANS = {
     features: ['10 projections', '3 walkthrough credits', 'Full feature access for 14 days'],
     missing:  [],
   },
+  expired: {
+    label: 'Trial ended', price: 0, color: 'var(--muted)',
+    features: ['Choose a plan below to keep creating projections and walkthroughs', 'Credit packs you bought still work'],
+    missing:  [],
+  },
 };
 
 const CREDIT_PACKS = [
@@ -66,7 +71,7 @@ export function BillingPage() {
   const [showCredits,     setShowCredits]     = useState(false);
 
   const plan       = PLANS[tier] || PLANS.trial;
-  const isTrial    = !subscription || subscription.status === 'trialing';
+  const isTrial    = (!subscription || subscription.status === 'trialing') && tier !== 'expired';   // an ended trial is not a trial
   const isActive   = subscription?.status === 'active';
   const renewDate  = subscription?.current_period_end
     ? new Date(subscription.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -165,7 +170,7 @@ export function BillingPage() {
                 background: isActive ? 'var(--green-bg)' : isTrial ? 'var(--amber-bg)' : 'var(--color-red-light)',
                 color:      isActive ? 'var(--green-dark)' : isTrial ? 'var(--color-amber-dark)' : 'var(--color-red-dark)',
               }}>
-                {isActive ? '● Active' : isTrial ? '◐ Trial' : '✗ Inactive'}
+                {isActive ? 'Active' : isTrial ? 'Trial' : tier === 'expired' ? 'Ended' : 'Inactive'}
               </span>
             </div>
             <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '14px' }}>
@@ -190,7 +195,7 @@ export function BillingPage() {
             <button className="ts-btn ts-btn-ghost ts-btn-sm" onClick={() => { setShowPlans(!showPlans); setShowCredits(false); }}>
               {showPlans ? 'Hide plans ↑' : 'Change plan ↓'}
             </button>
-            {isTrial && (
+            {(isTrial || tier === 'expired') && (
               <button className="ts-btn ts-btn-primary ts-btn-sm" onClick={() => { setShowPlans(true); setShowCredits(false); }}>
                 Subscribe now
               </button>
@@ -351,6 +356,8 @@ export function BillingPage() {
                 ? 'Update your card, download invoices, or cancel your subscription via the Stripe billing portal.'
                 : isTrial
                 ? 'No payment method required during your trial. Subscribe to add a card.'
+                : tier === 'expired'
+                ? 'Your free trial has ended. Subscribe to keep creating projections and walkthroughs.'
                 : 'Your subscription is inactive. Subscribe to reactivate.'}
             </div>
           </div>

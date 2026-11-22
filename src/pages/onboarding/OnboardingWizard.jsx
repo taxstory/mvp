@@ -279,7 +279,7 @@ export default function OnboardingWizard() {
                   onClick={handleParse}
                   disabled={parsing || (!file && !useDemo)} aria-busy={parsing}
                 >
-                  {parsing ? '⏳ Parsing return…' : useDemo ? 'Load demo return →' : 'Parse PDF →'}
+                  {parsing ? 'Parsing return…' : useDemo ? 'Load demo return →' : 'Parse PDF →'}
                 </button>
               )}
 

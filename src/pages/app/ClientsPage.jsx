@@ -485,7 +485,7 @@ function ClientReturns({ clientId, clientName }) {
       parsed:      ['Parsed',     'ts-p-dark'],
       script_ready:['Script',     'ts-p-dark'],
       audio_ready: ['Walkthrough ready','ts-p-green'],
-      parsing:     ['⏳ Parsing…',   'ts-p-gray'],
+      parsing:     ['Parsing…',   'ts-p-gray'],
       error:       ['Error',      'ts-p-red'],
     };
     const [label, cls] = map[status] || ['Unknown', 'ts-p-gray'];
@@ -499,7 +499,7 @@ function ClientReturns({ clientId, clientName }) {
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
         <div className="ts-card-title" style={{margin:0}}>
           Returns & walkthroughs
-          <span className="ts-card-sub">{loading ? '…' : `${returns.length} total`}</span>
+          <span className="ts-card-sub" style={{marginLeft:8}}>{loading ? '…' : `${returns.length} total`}</span>
         </div>
         <a href={`/cpa/projections?clientId=${clientId}`} className="ts-btn ts-btn-secondary ts-btn-sm">+ Import return</a>
       </div>
@@ -527,7 +527,7 @@ function ClientReturns({ clientId, clientName }) {
                   <td style={{fontWeight:600,color:'var(--dark)'}}>{tax ? fmt(tax) : '—'}</td>
                   <td>{rate != null ? <span className="ts-pill ts-p-green">{Number(rate).toFixed(1)}%</span> : '—'}</td>
                   <td>{statusPill(r.status)}</td>
-                  <td style={{fontSize:12,color:'var(--muted)'}}>{new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'})}</td>
+                  <td style={{fontSize:12,color:'var(--muted)'}}>{new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
                   <td>
                     <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
                       <a href={`/cpa/projections?id=${r.id}`} className="ts-btn ts-btn-ghost ts-btn-sm">View →</a>

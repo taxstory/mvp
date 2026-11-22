@@ -20,7 +20,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* ── Tablet ────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .ts-g3, .ts-g3b, .ts-g4, .ts-g5 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .ts-g3, .ts-g3b, .ts-g4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .ts-g2m, .ts-split, .ts-split-wide { grid-template-columns: minmax(0, 1fr) !important; }
 }
 
@@ -40,7 +40,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .ts-page { padding: 64px 16px 24px; }          /* top clears the hamburger */
 
   .ts-g2, .ts-g3, .ts-g3b { grid-template-columns: minmax(0, 1fr) !important; }
-  .ts-g4, .ts-g5          { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .ts-g4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 
   .ts-hrow { flex-direction: column; align-items: stretch; gap: 12px; }
 
