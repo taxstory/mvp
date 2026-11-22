@@ -33,13 +33,13 @@ export default function LoginPage() {
           {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-6">{error}</div>}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+              <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input id="login-email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)}
                 className="input" placeholder="you@yourfirm.com" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
+              <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input id="login-password" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)}
                 className="input" placeholder="••••••••" />
             </div>
             <div className="text-right">

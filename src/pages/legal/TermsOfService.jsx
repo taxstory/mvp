@@ -8,7 +8,7 @@ export default function TermsOfService() {
       <MarketingNav />
       <div className="flex-1 max-w-3xl mx-auto px-6 py-16">
         <h1 className="font-serif text-4xl font-bold text-brand-dark mb-2">Terms of Service</h1>
-        <p className="text-gray-400 text-sm mb-10">Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <p className="text-gray-400 text-sm mb-10">Last updated: November 17, 2026{/* change this date whenever the text changes — it is a statement, not today's date */}</p>
         <div className="space-y-8 text-gray-700 text-sm leading-relaxed">
           <section><h2 className="font-semibold text-brand-dark text-xl mb-3">1. Acceptance</h2><p>By creating a TaxStory account or using any TaxStory service, you agree to these Terms of Service. TaxStory is operated by Lakeside Advisory Group, LLC.</p></section>
           <section><h2 className="font-semibold text-brand-dark text-xl mb-3">2. Service description</h2><p>TaxStory provides AI-powered tax return video generation and multi-year tax projection tools for tax and financial professionals. The platform processes tax return data using a PII-free architecture and generates client-facing content using artificial intelligence.</p></section>

@@ -55,18 +55,18 @@ export default function SignUpPage() {
           {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-6">{error}</div>}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Firm Name</label>
-              <input type="text" required value={form.firmName} onChange={update('firmName')}
+              <label htmlFor="su-firm" className="block text-sm font-medium text-gray-700 mb-1">Firm Name</label>
+              <input id="su-firm" type="text" autoComplete="organization" required value={form.firmName} onChange={update('firmName')}
                 className="input" placeholder="Your firm name" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" required value={form.email} onChange={update('email')}
+              <label htmlFor="su-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input id="su-email" type="email" autoComplete="email" required value={form.email} onChange={update('email')}
                 className="input" placeholder="you@yourfirm.com" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input type="password" required minLength={8} value={form.password} onChange={update('password')}
+              <label htmlFor="su-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input id="su-password" type="password" autoComplete="new-password" required minLength={8} value={form.password} onChange={update('password')}
                 className="input" placeholder="At least 8 characters" />
             </div>
             <button type="submit" disabled={loading} aria-busy={loading}

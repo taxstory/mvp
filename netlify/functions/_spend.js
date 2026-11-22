@@ -7,7 +7,9 @@ const { logError } = require('./_logError');
 
 const num = (name, dflt) => { const v = parseFloat(process.env[name]); return Number.isFinite(v) && v > 0 ? v : dflt; };
 const rates  = () => ({ anthropicInPerM: num('ANTHROPIC_INPUT_USD_PER_MTOK', 3), anthropicOutPerM: num('ANTHROPIC_OUTPUT_USD_PER_MTOK', 15), ttsPerMChar: num('OPENAI_TTS_USD_PER_MCHAR', 15) });
-const limits = () => ({ global: num('DAILY_VENDOR_BUDGET_USD', 50), user: num('USER_DAILY_VENDOR_BUDGET_USD', 5) });
+// Budgets accept 0: setting DAILY_VENDOR_BUDGET_USD=0 in Netlify is the emergency stop for all paid AI calls (see docs/ROLLBACK.md).
+const cap = (name, dflt) => { const v = parseFloat(process.env[name]); return Number.isFinite(v) && v >= 0 ? v : dflt; };
+const limits = () => ({ global: cap('DAILY_VENDOR_BUDGET_USD', 50), user: cap('USER_DAILY_VENDOR_BUDGET_USD', 5) });
 
 const estimateAnthropicCost = (inTok, outTok) => { const r = rates(); return (inTok / 1e6) * r.anthropicInPerM + (outTok / 1e6) * r.anthropicOutPerM; };
 const estimateTtsCost = chars => (chars / 1e6) * rates().ttsPerMChar;

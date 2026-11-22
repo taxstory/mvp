@@ -8,7 +8,7 @@ export default function DPA() {
       <MarketingNav />
       <div className="flex-1 max-w-3xl mx-auto px-6 py-16">
         <h1 className="font-serif text-4xl font-bold text-brand-dark mb-2">Data Processing Agreement</h1>
-        <p className="text-gray-400 text-sm mb-10">Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <p className="text-gray-400 text-sm mb-10">Last updated: May 5, 2026{/* change this date whenever the text changes — it is a statement, not today's date */}</p>
         <div className="space-y-8 text-gray-700 text-sm leading-relaxed">
           <section><h2 className="font-semibold text-brand-dark text-xl mb-3">1. Scope</h2><p>This Data Processing Agreement ("DPA") governs the processing of personal data by Lakeside Advisory Group, LLC ("Processor") on behalf of TaxStory platform users ("Controller") in connection with the TaxStory service.</p></section>
           <section><h2 className="font-semibold text-brand-dark text-xl mb-3">2. PII-Free Architecture</h2><p>TaxStory's PDF parser is configured at the extraction layer to never process personally identifiable information from tax returns. Personal identifiers including but not limited to taxpayer names, Social Security numbers, Employer Identification Numbers, home addresses, and dates of birth are excluded from extraction by parser configuration. This is a technical control, not a policy-level control.</p></section>

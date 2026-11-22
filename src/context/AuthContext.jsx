@@ -50,7 +50,9 @@ export function AuthProvider({ children }) {
       password,
       options: {
         data: { role, firm_name: firmName },
-        emailRedirectTo: `${import.meta.env.VITE_APP_URL}/auth/callback`,
+        // The confirmation link lands on a real route (there is no /auth/callback page: it fell through to the home page and could
+        // drop the sign-in). /dashboard sends a new user on to onboarding. Same origin as the reset link below.
+        emailRedirectTo: `${window.location.origin}/dashboard`,
       },
     });
     return { data, error };

@@ -27,9 +27,10 @@
     Cache-Control = "no-cache, no-store, must-revalidate"
 
 # ── Security headers (Phase 2) ────────────────────────────────────────────────────────────────────────────
-# The CSP is REPORT-ONLY until it has been exercised in staging: open every screen (incl. the client viewer, video
-# render, Stripe redirect) with the browser console open, fix anything it reports, then rename the header to
-# Content-Security-Policy to enforce it.
+# The CSP is ENFORCED (2026-11-22). Before switching it on, every page (incl. the client viewer and portal), PDF reading,
+# blob workers and WebAssembly were exercised in a browser with it enforced: no violations. If something new is blocked,
+# the browser console names the directive; add the host here. To relax it in an emergency, rename the header back to
+# Content-Security-Policy-Report-Only and redeploy.
 [[headers]]
   for = "/*"
   [headers.values]
@@ -38,7 +39,7 @@
     Referrer-Policy           = "strict-origin-when-cross-origin"
     Permissions-Policy        = "camera=(), microphone=(), geolocation=(), payment=()"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
-    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://*.posthog.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.posthog.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://*.posthog.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.posthog.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 
 # Pages whose URL carries a bearer token (share link / client portal): never leak it via Referer, never cache, never index.
 [[headers]]

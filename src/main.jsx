@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import * as Sentry from '@sentry/react';
-import posthog from 'posthog-js';
 import './index.css';            // base styles + Tailwind first; App's tokens.css / launch.css load after and take precedence
 import App from './App';
 
@@ -46,8 +45,9 @@ if (import.meta.env.VITE_SENTRY_DSN) {
 
 // ── PostHog analytics (no-op when VITE_POSTHOG_KEY is unset) ──
 // Not on the client viewer or portal: those visitors are taxpayers who never agreed to our analytics.
+// Loaded after the page instead of before it (it is a third of the app's startup code otherwise).
 if (import.meta.env.VITE_POSTHOG_KEY && !CLIENT_FACING) {
-  posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
+  import('posthog-js').then(({ default: posthog }) => posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
     api_host: import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com',
     // PII-free: never capture personal identifiers
     sanitize_properties(properties) {
@@ -60,9 +60,9 @@ if (import.meta.env.VITE_POSTHOG_KEY && !CLIENT_FACING) {
     persistence: 'memory',        // no PostHog cookie or localStorage identifier on the advisor's machine
     ip: false,
     autocapture: false,          // controlled capture only
-    capture_pageview: true,
+    capture_pageview: 'history_change',   // every in-app page change, not just the first load
     disable_session_recording: true,
-  });
+  })).catch(() => {});                     // analytics must never break the app (ad blockers block it)
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(

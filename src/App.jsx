@@ -1,8 +1,8 @@
 import './styles/tokens.css';
 import './styles/launch.css';
 // src/App.jsx — TaxStory master router (updated Sep 2026)
-import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { supabase }                              from './lib/supabase';
 import { clearAllDrafts }                        from './utils/drafts';
 import { AuthProvider, useAuth }                   from './context/AuthContext';
@@ -12,32 +12,71 @@ import { ConfirmProvider }                        from './components/ui/ConfirmP
 
 import AppLayout           from './components/AppLayout';
 import LandingPage         from './pages/marketing/LandingPage';
-import HowItWorksPage      from './pages/marketing/HowItWorksPage';
-import PricingPage         from './pages/marketing/PricingPage';
-import LoginPage           from './pages/auth/LoginPage';
-import SignUpPage          from './pages/auth/SignUpPage';
-import ResetPasswordPage   from './pages/auth/ResetPasswordPage';
-import CalibratePage       from './pages/app/CalibratePage';
-import OnboardingWizard    from './pages/onboarding/OnboardingWizard';
-import Dashboard           from './pages/app/Dashboard';
-import ClientsPage         from './pages/app/ClientsPage';
-import BillingSettings     from './pages/app/BillingSettings';
-import MessagesPage        from './pages/app/MessagesPage';
-import DocumentsPage       from './pages/app/DocumentsPage';
-import ClientIntakePage    from './pages/app/ClientIntakePage';
-import ReportsPage         from './pages/app/ReportsPage';
-import HelpPage            from './pages/app/HelpPage';
-import SettingsPage        from './pages/app/SettingsPage';
-import CPAProjections      from './pages/cpa/CPAProjections';
-import ScenarioProjections from './pages/cpa/ScenarioProjections';
-import CPAVideoGenerator   from './pages/cpa/CPAVideoGenerator';
-import RIAProjections      from './pages/ria/RIAProjections';
+const HowItWorksPage = lazyPage(() => import('./pages/marketing/HowItWorksPage'));
+const PricingPage = lazyPage(() => import('./pages/marketing/PricingPage'));
+const LoginPage = lazyPage(() => import('./pages/auth/LoginPage'));
+const SignUpPage = lazyPage(() => import('./pages/auth/SignUpPage'));
+const ResetPasswordPage = lazyPage(() => import('./pages/auth/ResetPasswordPage'));
+const CalibratePage = lazyPage(() => import('./pages/app/CalibratePage'));
+const OnboardingWizard = lazyPage(() => import('./pages/onboarding/OnboardingWizard'));
+const Dashboard = lazyPage(() => import('./pages/app/Dashboard'));
+const ClientsPage = lazyPage(() => import('./pages/app/ClientsPage'));
+const BillingSettings = lazyPage(() => import('./pages/app/BillingSettings'));
+const MessagesPage = lazyPage(() => import('./pages/app/MessagesPage'));
+const DocumentsPage = lazyPage(() => import('./pages/app/DocumentsPage'));
+const ClientIntakePage = lazyPage(() => import('./pages/app/ClientIntakePage'));
+const ReportsPage = lazyPage(() => import('./pages/app/ReportsPage'));
+const HelpPage = lazyPage(() => import('./pages/app/HelpPage'));
+const SettingsPage = lazyPage(() => import('./pages/app/SettingsPage'));
+const CPAProjections = lazyPage(() => import('./pages/cpa/CPAProjections'));
+const ScenarioProjections = lazyPage(() => import('./pages/cpa/ScenarioProjections'));
+const CPAVideoGenerator = lazyPage(() => import('./pages/cpa/CPAVideoGenerator'));
+const RIAProjections = lazyPage(() => import('./pages/ria/RIAProjections'));
 import { FEATURES }        from './config/features';
-import VideoViewer         from './pages/viewer/VideoViewer';
-import ClientPortal        from './pages/viewer/ClientPortal';
-import PrivacyPolicy       from './pages/legal/PrivacyPolicy';
-import TermsOfService      from './pages/legal/TermsOfService';
-import DPA                 from './pages/legal/DPA';
+const VideoViewer = lazyPage(() => import('./pages/viewer/VideoViewer'));
+const ClientPortal = lazyPage(() => import('./pages/viewer/ClientPortal'));
+const PrivacyPolicy = lazyPage(() => import('./pages/legal/PrivacyPolicy'));
+const TermsOfService = lazyPage(() => import('./pages/legal/TermsOfService'));
+const DPA = lazyPage(() => import('./pages/legal/DPA'));
+
+// Pages load on demand: the landing page and the client video link no longer download the whole app first.
+// If a page's file is missing because a new version was deployed while this tab was open, reload once to pick up the new version.
+function lazyPage(load) {
+  return lazy(() => load().then(
+    (m) => { try { sessionStorage.removeItem('ts-chunk-reload'); } catch {} return m; },
+    (err) => {
+      let reloaded = false;
+      try { reloaded = sessionStorage.getItem('ts-chunk-reload') === '1'; sessionStorage.setItem('ts-chunk-reload', '1'); } catch {}
+      if (!reloaded) { window.location.reload(); return new Promise(() => {}); }
+      throw err;
+    }
+  ));
+}
+
+function PageLoading() {
+  return <div className="ts-loading" role="status" style={{ minHeight: '60vh' }}>Loading…</div>;
+}
+
+// One title per page (tabs, bookmarks, search results). Client-facing pages set their own (firm / client name).
+const TITLES = {
+  '/': 'TaxStory — Client video walkthroughs of their tax return',
+  '/how-it-works': 'How it works · TaxStory', '/pricing': 'Pricing · TaxStory',
+  '/privacy': 'Privacy policy · TaxStory', '/terms': 'Terms of service · TaxStory', '/dpa': 'Data processing agreement · TaxStory',
+  '/login': 'Sign in · TaxStory', '/signup': 'Start your free trial · TaxStory', '/reset-password': 'Reset password · TaxStory',
+  '/onboarding': 'Set up your practice · TaxStory', '/dashboard': 'Dashboard · TaxStory', '/clients': 'Clients · TaxStory',
+  '/billing': 'Billing · TaxStory', '/messages': 'Messages · TaxStory', '/settings': 'Settings · TaxStory', '/help': 'Help · TaxStory',
+  '/cpa/projections': 'Tax projections · TaxStory', '/cpa/scenarios': 'Scenario projections · TaxStory',
+  '/cpa/video': 'Video generator · TaxStory', '/ria/projections': 'Investment planning · TaxStory',
+};
+function TitleManager() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    if (pathname.startsWith('/portal/')) return;                       // the portal titles itself with the client's name
+    if (pathname.startsWith('/view/')) { document.title = 'Your tax return walkthrough'; return; }
+    document.title = TITLES[pathname.replace(/\/+$/, '') || '/'] || 'TaxStory';
+  }, [pathname]);
+  return null;
+}
 
 function PrivateRoute({ children, allowedRoles }) {
   const { user, profile, loading } = useAuth();
@@ -86,6 +125,8 @@ export default function App() {
       <ConfirmProvider>
       <BrowserRouter>
         <BackendNotice />
+        <TitleManager />
+        <Suspense fallback={<PageLoading />}>
         <Routes>
           {/* Marketing */}
           <Route path="/"             element={<LandingPage />} />
@@ -131,6 +172,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
       <ToastContainer />
       </ConfirmProvider>

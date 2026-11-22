@@ -68,8 +68,9 @@ exports.handler = makeHandler(['STRIPE_SECRET_KEY'], async (event, { supabase, d
     const priceId = PRICE_IDS[tier];
     if (!priceId) {
       throw Object.assign(
-        new Error(`No price configured for tier: ${tier}. Set STRIPE_PRICE_${tier.toUpperCase()} in Netlify.`),
-        { statusCode: 400 }
+        // Our misconfiguration, not the customer's: log the setting name, show a plain message.
+        (console.error(`[create-checkout] STRIPE_PRICE_${tier.toUpperCase()} is not set in Netlify`), new Error('This plan is not available to buy right now. Please contact support.')),
+        { statusCode: 503 }
       );
     }
     const params = {
@@ -96,8 +97,8 @@ exports.handler = makeHandler(['STRIPE_SECRET_KEY'], async (event, { supabase, d
     const priceId = PRICE_IDS[creditPack];
     if (!priceId) {
       throw Object.assign(
-        new Error(`No price configured for: ${creditPack}. Set STRIPE_PRICE_${creditPack.toUpperCase()}.`),
-        { statusCode: 400 }
+        (console.error(`[create-checkout] STRIPE_PRICE_${creditPack.toUpperCase()} is not set in Netlify`), new Error('Credit packs are not available to buy right now. Please contact support.')),
+        { statusCode: 503 }
       );
     }
     const session = await stripe.checkout.sessions.create({

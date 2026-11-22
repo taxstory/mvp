@@ -9,7 +9,7 @@ export default function PrivacyPolicy() {
       <MarketingNav />
       <div className="flex-1 max-w-3xl mx-auto px-6 py-16">
         <h1 className="font-serif text-4xl font-bold text-brand-dark mb-2">Privacy Policy</h1>
-        <p className="text-gray-400 text-sm mb-10">Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <p className="text-gray-400 text-sm mb-10">Last updated: November 17, 2026{/* change this date whenever the text changes — it is a statement, not today's date */}</p>
 
         <div className="prose prose-gray max-w-none space-y-8 text-gray-700 text-sm leading-relaxed">
           <section>

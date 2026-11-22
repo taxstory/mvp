@@ -326,6 +326,12 @@ svg.lucide { display: inline-block; vertical-align: -0.18em; flex-shrink: 0; }  
 input[type=text],
 input[type=number],
 input[type=email],
+input[type=password],
+input[type=search],
+input[type=tel],
+input[type=url],
+input[type=date],
+input:not([type]),
 select,
 textarea {
   width: 100%;
