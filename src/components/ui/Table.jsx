@@ -32,7 +32,7 @@
 //     data={clients}
 //     keyField="id"
 //     loading={loading}
-//     emptyState={<EmptyState icon="👤" title="No clients" />}
+//     emptyState={<EmptyState icon={Users} title="No clients" />}
 //     onSort={(key, dir) => setSort({ key, dir })}
 //     sortKey={sort.key}
 //     sortDir={sort.dir}

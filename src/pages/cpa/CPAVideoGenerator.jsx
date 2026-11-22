@@ -13,29 +13,9 @@ import { usePrivacyMode } from '../../hooks/usePrivacyMode';
 import UnverifiedAmountsModal from '../../components/UnverifiedAmountsModal';
 import { calcScenarios, taxOptionsFor } from '../../utils/taxEngine';
 import { FEATURES } from '../../config/features';
+import { useToast } from '../../components/ui';
+import { Icon, IconLabel } from '../../components/Icon';
 
-// ── Module-level style constants ─────────────────────────────────────────────
-// Defined outside the component so they're created once, not on every render.
-// Style objects inside render functions are allocated and GC'd on every paint.
-const S = {
-  card:    { background: '#fff', border: '1px solid var(--color-border)', borderRadius: 13, padding: '18px 20px', marginBottom: 12 },
-  cardSm:  { background: '#fff', border: '1px solid var(--color-border)', borderRadius: 10, padding: '14px 16px', marginBottom: 10 },
-  label:   { display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4 },
-  input:   { width: '100%', padding: '8px 10px', border: '1px solid var(--color-border)', borderRadius: 8,
-             fontSize: 13, fontFamily: 'inherit', color: 'var(--dark)', background: 'var(--color-soft-white)' },
-  btnPri:  { padding: '9px 18px', background: 'var(--purple)', color: '#fff', border: 'none',
-             borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
-  btnSec:  { padding: '9px 18px', background: 'var(--purple3)', color: 'var(--purple)', border: 'none',
-             borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
-  muted:   { fontSize: 11, color: 'var(--muted)', lineHeight: 1.6 },
-  pill:    { display: 'inline-flex', alignItems: 'center', padding: '2px 9px',
-             borderRadius: 20, fontSize: 10.5, fontWeight: 600 },
-  pillPurple: { background: 'var(--purple3)', color: 'var(--purple)' },
-  pillGreen:  { background: 'var(--green-bg)', color: 'var(--green-dark)' },
-  pillAmber:  { background: 'var(--amber-bg)', color: 'var(--color-amber-dark)' },
-  row:     { display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-             padding: '8px 0', borderBottom: '1px solid var(--color-gray-bg)' },
-};
 
 
 function cleanFilename(name) {
@@ -44,14 +24,15 @@ function cleanFilename(name) {
 }
 
 const STEPS = [
-  { id: 'script', icon: '✍️', label: 'Writing personalized script',     sub: 'Claude is writing narration from your approved figures. No names or identifiers are sent.' },
-  { id: 'audio',  icon: '🎙️', label: 'Generating voiceover audio',       sub: 'Converting each scene to natural speech. This runs in the background, so long narrations are fine.' },
-  { id: 'video',  icon: '🎬', label: 'Assembling video walkthrough',     sub: 'Syncing audio with Form 1040 highlights...' },
-  { id: 'done',   icon: '✅', label: 'Walkthrough ready',                sub: '' },
+  { id: 'script', icon: 'edit', label: 'Writing personalized script',     sub: 'Claude is writing narration from your approved figures. No names or identifiers are sent.' },
+  { id: 'audio',  icon: 'mic', label: 'Generating voiceover audio',       sub: 'Converting each scene to natural speech. This runs in the background, so long narrations are fine.' },
+  { id: 'video',  icon: 'video', label: 'Assembling video walkthrough',     sub: 'Syncing audio with Form 1040 highlights...' },
+  { id: 'done',   icon: 'success', label: 'Walkthrough ready',                sub: '' },
 ];
 
 export default function CPAVideoGenerator() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const { creditsRemaining, creditsTotal, creditsUsed } = useSubscription();
   const [searchParams] = useSearchParams();
 
@@ -74,7 +55,7 @@ export default function CPAVideoGenerator() {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
       a.download = json.filename; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    } catch (e) { window.alert(e.message); }
+    } catch (e) { toast(e.message, { variant: 'danger', duration: 6000 }); }
     finally { setRecordBusy(null); }
   }
   const [videos, setVideos]     = useState([]);
@@ -373,14 +354,14 @@ export default function CPAVideoGenerator() {
           <div className="ts-page-sub">AI-generated walkthroughs — Form 1040 with highlighted fields, synced voiceover, and branded presentation</div>
         </div>
         {!loading && (hasReturns
-          ? <button className="ts-btn ts-btn-primary" onClick={() => setView('generate')}>🎬 Generate walkthrough</button>
-          : <Link to="/cpa/projections" className="ts-btn ts-btn-primary">📄 Upload a return first</Link>
+          ? <button className="ts-btn ts-btn-primary" onClick={() => setView('generate')}><Icon name="video" /> Generate walkthrough</button>
+          : <Link to="/cpa/projections" className="ts-btn ts-btn-primary"><Icon name="file" /> Upload a return first</Link>
         )}
       </div>
 
       {/* Credit bar */}
       <div className="ts-hero-banner" style={{ marginBottom: '16px' }}>
-        <span style={{ fontSize: '20px' }}>🎬</span>
+        <Icon name="video" size={20} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '12px', fontWeight: 700, color: 'white', marginBottom: '4px' }}>
             Walkthrough credits — {credits} of {creditTotal} remaining
@@ -393,10 +374,10 @@ export default function CPAVideoGenerator() {
       </div>
 
       {loading ? (
-        <div className="ts-card" style={{ padding: '60px', textAlign: 'center', color: 'var(--muted)' }}>Loading…</div>
+        <div className="ts-card"><div className="ts-loading" role="status">Loading…</div></div>
       ) : !hasReturns ? (
         <div className="ts-card" style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📄</div>
+          <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom: 16 }}><Icon name="file" size={24} /></div>
           <div style={{ fontFamily: 'Playfair Display,serif', fontSize: '18px', fontWeight: 700, color: 'var(--dark)', marginBottom: '8px' }}>
             Upload a tax return to get started
           </div>
@@ -404,7 +385,7 @@ export default function CPAVideoGenerator() {
             TaxStory generates personalized video walkthroughs from completed tax returns — the Form 1040 layout with highlighted fields synced to narration.
           </div>
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-            <Link to="/cpa/projections" className="ts-btn ts-btn-primary">📄 Upload a tax return</Link>
+            <Link to="/cpa/projections" className="ts-btn ts-btn-primary"><Icon name="file" /> Upload a tax return</Link>
             <Link to="/cpa/projections" className="ts-btn ts-btn-ghost">or enter data manually</Link>
           </div>
         </div>
@@ -439,13 +420,13 @@ export default function CPAVideoGenerator() {
                       className="ts-btn ts-btn-primary ts-btn-sm"
                       disabled={credits === 0}
                       onClick={() => { setSelectedId(r.id); setView('generate'); }}>
-                      {credits === 0 ? 'No credits' : '🎬 Generate walkthrough'}
+                      {credits === 0 ? 'No credits' : 'Generate walkthrough'}
                     </button>
                   </div>
                 ))}
                 {credits === 0 && (
-                  <div style={{ background: 'var(--amber-bg)', border: '1px solid var(--color-amber-border)', color: 'var(--color-amber-dark)', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 500 }}>
-                    ⚠️ No credits remaining. <Link to="/billing" style={{ color: 'var(--color-amber-dark)', fontWeight: 700 }}>Buy credits →</Link>
+                  <div className="ts-note ts-alert-warning ts-note-compact" style={{ fontWeight:500 }}>
+                    <Icon name="warning" /> No credits remaining. <Link to="/billing" style={{ color: 'var(--color-amber-dark)', fontWeight: 700 }}>Buy credits →</Link>
                   </div>
                 )}
               </div>
@@ -480,7 +461,7 @@ export default function CPAVideoGenerator() {
                           </button>
                           <button className="ts-btn ts-btn-ghost ts-btn-sm" title="Download a PDF of what was narrated, the figures, approvals and delivery — for your records"
                             disabled={recordBusy === v.id} aria-busy={recordBusy === v.id} onClick={() => downloadRecord(v.id)}>
-                            {recordBusy === v.id ? '…' : 'Record ↓'}
+                            Record ↓
                           </button>
                         </td>
                       </tr>
@@ -518,8 +499,8 @@ export default function CPAVideoGenerator() {
             </div>
 
             {credits === 0 && (
-              <div style={{ background: 'var(--amber-bg)', border: '1px solid var(--color-amber-border)', color: 'var(--color-amber-dark)', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', marginBottom: '14px' }}>
-                ⚠️ No credits remaining. <Link to="/billing" style={{ color: 'var(--color-amber-dark)', fontWeight: 700 }}>Buy more →</Link>
+              <div className="ts-note ts-alert-warning" style={{ marginBottom:'14px' }}>
+                <Icon name="warning" /> No credits remaining. <Link to="/billing" style={{ color: 'var(--color-amber-dark)', fontWeight: 700 }}>Buy more →</Link>
               </div>
             )}
 
@@ -577,9 +558,9 @@ export default function CPAVideoGenerator() {
 
             {awaitingScriptConfirm && segments.length > 0 && (
               <div style={{background:'var(--bg)',border:'1.5px solid var(--purple)',borderRadius:12,padding:'16px 18px',marginBottom:12}}>
-                <div style={{fontSize:13,fontWeight:700,color:'var(--dark)',marginBottom:8}}>📝 Review script before generating audio</div>
+                <div style={{fontSize:13,fontWeight:700,color:'var(--dark)',marginBottom:8}}><Icon name="note" /> Review script before generating audio</div>
                 <div style={{fontSize:12,color:'var(--muted)',marginBottom:8}}>
-                  🔒 Keep edits to the figures: no names, email addresses, phone numbers or ID numbers. The narration is sent to the voice service and shown to the client as a transcript.
+                  <Icon name="lock" /> Keep edits to the figures: no names, email addresses, phone numbers or ID numbers. The narration is sent to the voice service and shown to the client as a transcript.
                 </div>
                 {(() => {
                   // Rough audio duration estimate: ~130 words/minute for TTS narration
@@ -637,10 +618,10 @@ export default function CPAVideoGenerator() {
             {selectedId && credits > 0 && !awaitingScriptConfirm && (
               <button className="ts-btn ts-btn-primary" style={{ width: '100%', justifyContent: 'center' }}
                 onClick={handleGenerate} disabled={isGenerating} aria-busy={isGenerating}>
-                🎬 Generate walkthrough — uses 1 credit
+                <Icon name="video" /> Generate walkthrough — uses 1 credit
               </button>
             )}
-            {error && <div style={{ background: 'var(--color-red-light)', color: 'var(--color-red-dark)', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', marginTop: '10px' }}>{error}</div>}
+            {error && <div className="ts-note ts-alert-danger" role="alert" style={{ marginTop:'10px' }}>{error}</div>}
           </div>
         )}
 
@@ -673,7 +654,7 @@ export default function CPAVideoGenerator() {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '13px', fontWeight: 600, color: isActive ? 'var(--purple)' : isDone ? 'var(--green-dark)' : 'var(--muted)' }}>
-                        {step.icon} {step.label}
+                        <IconLabel icon={step.icon}>{step.label}</IconLabel>
                       </div>
                       {isActive && step.sub && (
                         <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px' }}>
@@ -717,8 +698,8 @@ export default function CPAVideoGenerator() {
             {/* Edit script */}
             <div style={{ marginTop: '10px' }}>
               <button onClick={() => setEditingScript(!editingScript)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--purple)', fontWeight: 600 }}>
-                {editingScript ? 'Cancel editing' : '✏️ Edit script text'}
+                className="ts-link-btn">
+                {editingScript ? 'Cancel editing' : 'Edit script text'}
               </button>
               {editingScript && (
                 <>
@@ -736,7 +717,7 @@ export default function CPAVideoGenerator() {
         {/* Audio player — appears when audio is ready */}
         {currentStep === 'done' && audioUrl && (
           <div className="ts-card">
-            <div className="ts-card-title">🎙️ Voiceover audio</div>
+            <div className="ts-card-title"><IconLabel icon="mic">Voiceover audio</IconLabel></div>
             <audio controls style={{ width: '100%' }} src={audioUrl}
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
@@ -755,7 +736,7 @@ export default function CPAVideoGenerator() {
         {/* Video renderer — client-side Canvas + MediaRecorder */}
         {currentStep === 'done' && segments.length > 0 && (
           <div className="ts-card" style={{ border: '1.5px solid var(--purple)' }}>
-            <div className="ts-card-title">🎬 Video walkthrough
+            <div className="ts-card-title"><IconLabel icon="video">Video walkthrough</IconLabel>
               <span className="ts-card-sub">renders in your browser · fastest in Chrome or Edge</span>
             </div>
             {videoProps?.mode === 'lambda' ? (
@@ -780,19 +761,16 @@ export default function CPAVideoGenerator() {
                 <div style={{ marginTop:10, fontSize:12.5, color:'var(--muted)' }}>Saving the video so your client receives it…</div>
               )}
               {videoSave.state === 'error' && (
-                <div style={{ marginTop:10, padding:'10px 14px', background:'var(--color-red-light)', color:'var(--color-red-dark)', borderRadius:10, fontSize:12.5 }}>{videoSave.error}</div>
+                <div className="ts-note ts-alert-danger ts-note-compact" role="alert" style={{ marginTop:10 }}>{videoSave.error}</div>
               )}
               {renderProgress === 100 && videoSave.state === 'saved' && (
-                <div style={{ marginTop:10, padding:'10px 14px', background:'var(--green-bg)',
-                  border:'1px solid var(--color-green-check)', borderRadius:10, display:'flex',
-                  alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+                <div className="ts-note ts-alert-success" role="status" style={{ marginTop:10, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
                   <div style={{ fontSize:12.5, fontWeight:600, color:'var(--green-dark)' }}>
                     ✓ Video rendered — ready to share with your client
                   </div>
                   <button
                     onClick={() => document.querySelector('[data-share-panel]')?.scrollIntoView({ behavior:'smooth' })}
-                    style={{ padding:'7px 14px', background:'var(--green-dark)', color:'#fff', border:'none',
-                      borderRadius:9, fontSize:12.5, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                    className="ts-btn ts-btn-primary ts-btn-sm">
                     Create share link ↓
                   </button>
                 </div>
@@ -803,13 +781,13 @@ export default function CPAVideoGenerator() {
         )}
 
         {error && !currentStep && (
-          <div style={{ background: 'var(--color-red-light)', color: 'var(--color-red-dark)', padding: '10px 14px', borderRadius: '10px', fontSize: '13px' }}>{error}</div>
+          <div className="ts-note ts-alert-danger" role="alert">{error}</div>
         )}
 
         <div data-share-panel />
         {currentStep === 'done' && (
           <div className="ts-card" style={{ border: '1.5px solid var(--purple)' }}>
-            <div className="ts-card-title">📤 Share with your client
+            <div className="ts-card-title"><IconLabel icon="share">Share with your client</IconLabel>
               <span className="ts-card-sub">secure link · no client account required</span>
             </div>
 
@@ -825,13 +803,13 @@ export default function CPAVideoGenerator() {
                       style={{ flex: 1, padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 9, fontSize: 12.5, fontFamily: 'inherit', color: 'var(--dark)', background: 'var(--bg)' }}
                       onClick={e => e.target.select()} />
                     <button onClick={copyShareLink}
-                      style={{ padding: '9px 16px', background: shareCopied ? 'var(--green)' : 'var(--purple)', color: '#fff', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'background .2s' }}>
+                      className={`ts-btn ts-btn-sm ${shareCopied ? 'ts-btn-success' : 'ts-btn-primary'}`}>
                       {shareCopied ? '✓ Copied!' : 'Copy link'}
                     </button>
                   </div>
                 </div>
                 {shareResult.emailSent && (
-                  <div style={{ padding: '10px 12px', background: 'var(--green-bg)', borderRadius: 9, fontSize: 12.5, color: 'var(--green-dark)', fontWeight: 500 }}>
+                  <div className="ts-note ts-alert-success ts-note-compact" role="status" style={{ fontWeight:500 }}>
                     ✓ Email sent to {shareEmail}
                   </div>
                 )}
@@ -852,8 +830,8 @@ export default function CPAVideoGenerator() {
                     style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 9, fontSize: 13, fontFamily: 'inherit', color: 'var(--dark)', boxSizing: 'border-box' }} />
                 </div>
                 <button type="submit" disabled={shareSending} aria-busy={shareSending}
-                  style={{ padding: '11px', background: 'var(--purple)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: shareSending ? 0.7 : 1 }}>
-                  {shareSending ? 'Creating link…' : shareEmail.trim() ? '📧 Send to client' : '🔗 Create share link'}
+                  className="ts-btn ts-btn-primary ts-btn-block">
+                  {shareSending ? 'Creating link…' : shareEmail.trim() ? 'Send to client' : 'Create share link'}
                 </button>
               </form>
             )}
@@ -861,7 +839,7 @@ export default function CPAVideoGenerator() {
         )}
 
         {currentStep === 'done' && (
-          <button onClick={resetGenerate} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--purple)', fontSize: '13px', fontWeight: 600, textAlign: 'left' }}>
+          <button onClick={resetGenerate} className="ts-link-btn">
             ← Generate another walkthrough
           </button>
         )}
@@ -899,7 +877,7 @@ export default function CPAVideoGenerator() {
                 setView('generate');
                 setTimeout(() => document.querySelector('[data-share-panel]')?.scrollIntoView({behavior:'smooth'}), 300);
               }}>
-              📤 Share with client
+              <Icon name="share" /> Share with client
             </button>
         </div>
       </div>
@@ -908,7 +886,7 @@ export default function CPAVideoGenerator() {
         {/* Audio player with segment tracker */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div className="ts-card">
-            <div className="ts-card-title">🎙️ Audio walkthrough</div>
+            <div className="ts-card-title"><IconLabel icon="mic">Audio walkthrough</IconLabel></div>
             {v.audio_url
               ? <SignedAudio value={v.audio_url} />
               : <div style={{ background: 'var(--bg)', borderRadius: '10px', padding: '20px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Audio not available</div>

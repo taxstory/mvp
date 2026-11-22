@@ -7,11 +7,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate }          from 'react-router-dom';
 import { supabase }             from '../lib/supabase';
 import { useAuth }              from '../context/AuthContext';
+import { Icon } from './Icon';
 
 const STEPS = [
   {
     id:    'return_uploaded',
-    icon:  '📄',
+    icon:  'file',
     title: 'Import your first return',
     desc:  'Choose a client PDF — it is read on your device and never uploaded. Takes a few seconds.',
     cta:   'Import a return',
@@ -19,7 +20,7 @@ const STEPS = [
   },
   {
     id:    'video_generated',
-    icon:  '🎬',
+    icon:  'video',
     title: 'Generate a walkthrough',
     desc:  'Turn the parsed return into a personalized 2-minute client walkthrough.',
     cta:   'Go to Walkthroughs',
@@ -27,7 +28,7 @@ const STEPS = [
   },
   {
     id:    'link_sent',
-    icon:  '🔗',
+    icon:  'link',
     title: 'Send it to a client',
     desc:  'Generate a share link from the walkthrough list and send it — you\'ll be notified when they watch.',
     cta:   'Send to a client',
@@ -94,7 +95,7 @@ export default function GettingStarted({ completedSteps = {}, onDismiss }) {
                   display:'flex', alignItems:'center', justifyContent:'center',
                   fontSize: done ? 13 : 14,
                 }}>
-                  {done ? '✓' : step.icon}
+                  <Icon name={done ? 'success' : step.icon} size={15} />
                 </div>
                 <div style={{ fontSize:12, fontWeight:700, color: done ? 'rgba(255,255,255,.6)' : '#fff', lineHeight:1.3 }}>
                   {step.title}
@@ -106,11 +107,7 @@ export default function GettingStarted({ completedSteps = {}, onDismiss }) {
               {!done && (
                 <button
                   onClick={() => navigate(step.route)}
-                  style={{
-                    padding:'5px 12px', background:'var(--color-purple)', color:'#fff',
-                    border:'none', borderRadius:7, fontSize:11.5, fontWeight:600,
-                    cursor:'pointer', fontFamily:'inherit',
-                  }}
+                  className="ts-btn ts-btn-primary ts-btn-sm"
                 >
                   {step.cta} →
                 </button>

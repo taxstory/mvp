@@ -24,6 +24,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { CircleCheck, CircleAlert, TriangleAlert, Info, X } from 'lucide-react';
 
 const ToastCtx = createContext(null);
 
@@ -59,10 +60,10 @@ function ToastItem({ id, message, variant, duration, onDismiss }) {
   const timerRef = useRef(null);
 
   const VARIANTS = {
-    success: { bg: 'var(--color-green-dark)',  icon: '✓'  },
-    danger:  { bg: 'var(--color-red-dark)',    icon: '✕'  },
-    warning: { bg: 'var(--color-amber-dark)',   icon: '⚠' },
-    info:    { bg: 'var(--color-blue)',         icon: 'ℹ' },
+    success: { bg: 'var(--success-text)', Icon: CircleCheck   },
+    danger:  { bg: 'var(--danger-text)',  Icon: CircleAlert   },
+    warning: { bg: 'var(--warning-text)', Icon: TriangleAlert },
+    info:    { bg: 'var(--info-text)',    Icon: Info          },
   };
   const v = VARIANTS[variant] || VARIANTS.info;
 
@@ -73,8 +74,8 @@ function ToastItem({ id, message, variant, duration, onDismiss }) {
 
   return (
     <div
-      role="status"
-      aria-live="polite"
+      role={variant === 'danger' ? 'alert' : 'status'}
+      aria-live={variant === 'danger' ? 'assertive' : 'polite'}
       aria-atomic="true"
       style={{
         display:      'flex',
@@ -94,7 +95,7 @@ function ToastItem({ id, message, variant, duration, onDismiss }) {
       }}
       onClick={() => onDismiss(id)}
     >
-      <span aria-hidden="true" style={{ fontSize: 15 }}>{v.icon}</span>
+      <v.Icon size={16} aria-hidden="true" style={{ flexShrink: 0 }} />
       <span style={{ flex: 1 }}>{message}</span>
       <button
         onClick={(e) => { e.stopPropagation(); onDismiss(id); }}
@@ -103,7 +104,7 @@ function ToastItem({ id, message, variant, duration, onDismiss }) {
           background: 'none', border: 'none', color: 'rgba(255,255,255,.7)',
           cursor: 'pointer', fontSize: 13, padding: '0 2px', fontFamily: 'inherit',
         }}
-      >✕</button>
+      ><X size={14} aria-hidden="true" /></button>
     </div>
   );
 }

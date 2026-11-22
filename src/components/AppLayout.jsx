@@ -10,6 +10,7 @@ import { useSubscription } from '../hooks/useSubscription';
 import { supabase } from '../lib/supabase';
 import DemoBanner     from './DemoBanner';
 import FeedbackModal  from './FeedbackModal';
+import { Icon } from './Icon';
 
 // NAV is a function of live state so badges can never disagree with Billing or the data.
 // The only badges are live ones: client count, unread messages, and the account's actual plan on Billing.
@@ -21,24 +22,24 @@ function buildNav({ isPaid, planLabel, unreadCount, clientCount }) {
 
   return [
     { section: 'Overview', items: [
-      { to: '/dashboard', icon: '⊞', label: 'Dashboard' },
+      { to: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
     ]},
     { section: 'Tools', items: [
-      { to: '/cpa/projections', icon: '📊', label: 'Tax Projections' },
+      { to: '/cpa/projections', icon: 'projections', label: 'Tax Projections' },
       ...(FEATURES.planningModules ? [
-        { to: '/cpa/scenarios',   icon: '⚖',  label: 'Scenario Projections' },
-        { to: '/ria/projections', icon: '📈', label: 'Investment Planning' },
+        { to: '/cpa/scenarios',   icon: 'scenarios', label: 'Scenario Projections' },
+        { to: '/ria/projections', icon: 'planning', label: 'Investment Planning' },
       ] : []),
-      { to: '/cpa/video',       icon: '🎬', label: 'Video Generator' },
+      { to: '/cpa/video',       icon: 'video', label: 'Video Generator' },
     ]},
     { section: 'Clients', items: [
-      { to: '/clients',   icon: '👤', label: 'Client list', ...count(clientCount) },
-      { to: '/messages',  icon: '💬', label: 'Messages',    ...count(unreadCount) },
+      { to: '/clients',   icon: 'clients', label: 'Client list', ...count(clientCount) },
+      { to: '/messages',  icon: 'messages', label: 'Messages',    ...count(unreadCount) },
     ]},
     { section: 'Account', items: [
-      { to: '/billing',  icon: '💳', label: 'Billing', ...planBadge },
-      { to: '/settings', icon: '⚙',  label: 'Settings' },
-      { to: '/help',     icon: '?',   label: 'Help & support' },
+      { to: '/billing',  icon: 'billing', label: 'Billing', ...planBadge },
+      { to: '/settings', icon: 'settings', label: 'Settings' },
+      { to: '/help',     icon: 'help', label: 'Help & support' },
     ]},
   ];
 }
@@ -147,7 +148,7 @@ export default function AppLayout() {
                     onClick={() => setNavOpen(false)}
                     className={({ isActive }) => `ts-ni${isActive ? ' ts-active' : ''}`}
                   >
-                    <span className="ts-ni-ic" aria-hidden="true">{item.icon}</span>
+                    <span className="ts-ni-ic" aria-hidden="true"><Icon name={item.icon} size={16} /></span>
                     {item.label}
                     {item.badge && (
                       <span className={`ts-ni-badge ${item.badgeClass}`}
@@ -169,7 +170,7 @@ export default function AppLayout() {
           color:'rgba(255,255,255,.4)', fontSize:11, fontWeight:500,
           cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center',
           gap:6, width:'calc(100% - 24px)', textAlign:'left' }}>
-        🐛 Report a bug · Share feedback
+        <Icon name="bug" size={14} /> Report a bug · Share feedback
       </button>
 
       <div className="ts-sidebar-footer">

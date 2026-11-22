@@ -72,7 +72,7 @@ function exportSummaryPDF(r, pd, projection, roth, flagDefs, fmt, firmNameIn) {
   const flagsHTML = flagDefs.length > 0
     ? flagDefs.map(f => `
         <div style="display:flex;gap:10px;padding:8px 12px;border-radius:8px;background:#F7F6FF;margin-bottom:6px;align-items:flex-start">
-          <span style="font-size:14px;flex-shrink:0">${f.icon}</span>
+          <span style="width:8px;height:8px;border-radius:50%;background:${f.color || '#6B5CE7'};margin-top:5px;flex-shrink:0"></span>
           <div><div style="font-size:12px;font-weight:700;color:#1A1230">${esc(f.label)}</div>
           <div style="font-size:11px;color:#6B698A;margin-top:2px;line-height:1.5">${esc(f.detail)}</div></div>
         </div>`).join('')
@@ -193,6 +193,9 @@ import { readReturnPdf } from '../../utils/pdfExtract';
 import { callFunction } from '../../utils/callFunction';
 import { downloadRecords } from '../../utils/records';
 import { FIELD_LABELS } from '../../utils/form1040Parser';
+import { EmptyState, Button } from '../../components/ui';
+import { FileText, Plus, SearchX } from 'lucide-react';
+import { Icon, IconLabel } from '../../components/Icon';
 
 export default function CPAProjections() {
   const confirm = useConfirm();
@@ -405,7 +408,7 @@ export default function CPAProjections() {
       setParseStep('reviewing');
       setAckVerified(false);
       setParsePreview({ result, data: { ...result.figures } });
-      if (result.quality === 'insufficient') setError('⚠️ Very little could be read from this PDF. Use a PDF exported from your tax software (not a scan), or enter the figures manually below.');
+      if (result.quality === 'insufficient') setError('Very little could be read from this PDF. Use a PDF exported from your tax software (not a scan), or enter the figures manually below.');
     } catch (e) {
       setError(e.message); setParseStep('');
     } finally { setParsing(false); }
@@ -522,13 +525,12 @@ export default function CPAProjections() {
           <div style={{fontSize:'13px',fontWeight:700,color:'var(--dark)'}}>All projections</div>
           <input type="text" placeholder="Search…" value={search} onChange={e=>setSearch(e.target.value)} style={{width:'180px',fontSize:'12px',padding:'7px 11px'}} />
         </div>
-        {loading ? <div style={{padding:'40px',textAlign:'center',color:'var(--muted)'}}>Loading…</div>
+        {loading ? <div className="ts-loading" role="status">Loading…</div>
         : filtered.length === 0 ? (
-          <div style={{textAlign:'center',padding:'40px'}}>
-            <div style={{fontSize:'32px',marginBottom:'10px'}}>📊</div>
-            <div style={{fontSize:'14px',color:'var(--muted)',marginBottom:'16px'}}>{search ? 'No results.' : 'No projections yet. Import a tax return PDF to get started.'}</div>
-            {!search && <button className="ts-btn ts-btn-primary" onClick={()=>setView('new')}>+ Import first return</button>}
-          </div>
+          search
+            ? <EmptyState icon={SearchX} size="sm" title="No matches" body={`Nothing matches “${search}”.`} />
+            : <EmptyState icon={FileText} title="No projections yet" body="Import a client's return PDF. It is read on this device and never uploaded."
+                action={<Button icon={Plus} onClick={()=>setView('new')}>Import first return</Button>} />
         ) : (
           <table className="ts-tbl">
             <thead><tr><th>Return / client</th><th>Tax year</th><th>Filing status</th><th>Federal tax</th><th>Eff. rate</th><th>Actions</th></tr></thead>
@@ -574,8 +576,8 @@ export default function CPAProjections() {
           onClick={()=>fileRef.current?.click()}>
           <input ref={fileRef} type="file" accept=".pdf" style={{display:'none'}} onChange={e=>handleFileDrop(e.target.files[0])} />
           {file
-            ? <div><div style={{fontSize:'24px',marginBottom:'6px'}}>📄</div><div style={{fontWeight:600,color:'var(--dark)'}}>{file.name}</div><div style={{fontSize:'11px',color:'var(--muted)'}}>{(file.size/1024/1024).toFixed(2)} MB · PDF</div></div>
-            : <div style={{color:'var(--muted)'}}><div style={{fontSize:'28px',marginBottom:'8px'}}>☁️</div>Drop your PDF here or click to browse · Max 25 MB</div>}
+            ? <div><div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom: 6 }}><Icon name="file" size={24} /></div><div style={{fontWeight:600,color:'var(--dark)'}}>{file.name}</div><div style={{fontSize:'11px',color:'var(--muted)'}}>{(file.size/1024/1024).toFixed(2)} MB · PDF</div></div>
+            : <div style={{color:'var(--muted)'}}><div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom: 8 }}><Icon name="upload" size={24} /></div>Drop your PDF here or click to browse · Max 25 MB</div>}
         </div>
         {file && (
         <div className="ts-frow" style={{marginBottom:14}}>
@@ -603,7 +605,7 @@ export default function CPAProjections() {
             )}
           </div>
         )}
-        {error && <div style={{marginTop:'10px',background:'var(--color-red-light)',color:'var(--color-red-dark)',padding:'10px 14px',borderRadius:'10px',fontSize:'12px'}}>{error}</div>}
+        {error && <div className="ts-note ts-alert-danger ts-note-compact" role="alert" style={{ marginTop:'10px' }}>{error}</div>}
         {file && !uploading && !parsing && (
           <button className="ts-btn ts-btn-primary" style={{marginTop:'12px',width:'100%'}} onClick={handleUploadParse}>
             → Read return on this device
@@ -636,11 +638,11 @@ export default function CPAProjections() {
         })()}
         {!uploading && !parsing && !parsePreview && (
           <div style={{marginTop:'10px',padding:'10px 12px',background:'var(--color-mint-light)',border:'1px solid var(--color-green-mint)',borderRadius:'8px',fontSize:'12px',color:'var(--color-green-deep)'}}>
-            🔒 Your PDF is read inside this browser tab and is never uploaded or saved. Names, SSNs, addresses and bank details are not read — only dollar figures, which you review before anything is saved.
+            <Icon name="lock" /> Your PDF is read inside this browser tab and is never uploaded or saved. Names, SSNs, addresses and bank details are not read — only dollar figures, which you review before anything is saved.
           </div>
         )}
-        <div style={{background:'var(--color-blue-bg)',border:'1px solid var(--color-blue-tab)',borderRadius:9,padding:'9px 12px',marginBottom:12,fontSize:12,color:'var(--color-blue)',lineHeight:1.6}}>
-          <strong>📋 Use digitally-generated PDFs</strong> from Drake, ProConnect, Lacerte, or CCH.
+        <div className="ts-note ts-alert-info ts-note-compact" style={{ marginBottom:12 }}>
+          <strong><Icon name="clipboard" /> Use digitally-generated PDFs</strong> from Drake, ProConnect, Lacerte, or CCH.
           Scanned or photographed documents cannot be read — the text must be embedded in the file.
         </div>
       </div>
@@ -651,16 +653,16 @@ export default function CPAProjections() {
         const fields = [...new Set([...(res.matched || []), 'totalIncome', 'agi', 'taxableIncome', 'totalTax', 'federalWithheld'])].filter(k => FIELD_LABELS[k]);
         const setField = (k, v) => setParsePreview(p => ({ ...p, data: { ...p.data, [k]: v === '' ? undefined : Number(v) } }));
         const tone = res.quality === 'good' ? ['var(--green-bg)', 'var(--green-dark)', '✓ Looks consistent — the figures add up the way the form says they should.']
-          : res.quality === 'review' ? ['var(--amber-bg)', 'var(--color-amber-dark)', '⚠ Please check carefully — some figures could not be confirmed against each other.']
-          : ['var(--color-red-light)', 'var(--color-red-dark)', '⚠ Too little could be read. Use a PDF exported from your tax software, or enter the figures manually.'];
+          : res.quality === 'review' ? ['var(--amber-bg)', 'var(--color-amber-dark)', 'Please check carefully — some figures could not be confirmed against each other.']
+          : ['var(--color-red-light)', 'var(--color-red-dark)', 'Too little could be read. Use a PDF exported from your tax software, or enter the figures manually.'];
         const shownChecks = res.checks.filter(c => c.status !== 'skip');
         return (
           <div style={{background:'var(--bg)',border:'1.5px solid var(--purple)',borderRadius:13,padding:'18px 20px',marginBottom:16}}>
             <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:10}}>
               <div>
-                <div style={{fontSize:13,fontWeight:700,color:'var(--dark)',marginBottom:6}}>✅ Return read on this device — check the figures</div>
+                <div style={{fontSize:13,fontWeight:700,color:'var(--dark)',marginBottom:6}}><Icon name="success" /> Return read on this device — check the figures</div>
                 <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.6}}>
-                  🔒 Your PDF was read inside this browser tab. It has <strong>not</strong> been uploaded, and no names, SSNs or addresses were read.
+                  <Icon name="lock" /> Your PDF was read inside this browser tab. It has <strong>not</strong> been uploaded, and no names, SSNs or addresses were read.
                   Only the figures below are saved when you click Save.
                 </div>
               </div>
@@ -671,7 +673,7 @@ export default function CPAProjections() {
               <div style={{marginBottom:12,display:'flex',flexDirection:'column',gap:4}}>
                 {shownChecks.map(c => (
                   <div key={c.id} style={{fontSize:12,color: c.status === 'pass' ? 'var(--green-dark)' : 'var(--color-amber-dark)'}}>
-                    {c.status === 'pass' ? '✓' : '⚠'} {c.label}{c.status === 'warn' ? ` — ${c.detail}` : ''}
+                    {c.status === 'pass' ? '✓' : ''} {c.label}{c.status === 'warn' ? ` — ${c.detail}` : ''}
                   </div>
                 ))}
               </div>
@@ -783,9 +785,7 @@ export default function CPAProjections() {
             {/* Advanced income — collapsible to reduce visual noise for simple W-2 clients */}
             <button type="button"
               onClick={() => setShowAdvanced(a => !a)}
-              style={{ background:'none', border:'none', color:'var(--purple)', fontSize:12.5,
-                fontWeight:600, cursor:'pointer', fontFamily:'inherit', padding:'4px 0',
-                display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
+              className="ts-link-btn" style={{ marginBottom:6 }}>
               {showAdvanced ? '▾' : '▸'} {showAdvanced ? 'Hide' : 'Show'} additional income sources
               {(() => {
                 // Count non-zero advanced fields so CPA knows if any are active when collapsed
@@ -848,7 +848,7 @@ export default function CPAProjections() {
                 return (
                   <div style={{background: usingItem ? 'var(--amber-bg)' : 'var(--color-blue-bg)', border:`1px solid ${usingItem ? 'var(--color-amber-border)' : 'var(--color-blue-border)'}`, borderRadius:8, padding:'8px 11px', fontSize:11.5, color: usingItem ? 'var(--color-amber-dark)' : 'var(--color-blue)', marginBottom:8}}>
                     {usingItem
-                      ? <>⚠️ SALT cap: paid <strong>${saltPaid.toLocaleString()}</strong> in state/local taxes but limited to $10,000 — <strong>${saltLost.toLocaleString()} lost to cap.</strong> Client is still itemizing.</>
+                      ? <><Icon name="warning" /> SALT cap: paid <strong>${saltPaid.toLocaleString()}</strong> in state/local taxes but limited to $10,000 — <strong>${saltLost.toLocaleString()} lost to cap.</strong> Client is still itemizing.</>
                       : <>ℹ️ SALT cap reduced itemized total to <strong>${itemizedWithCap.toLocaleString()}</strong>, below the standard deduction of <strong>${std.toLocaleString()}</strong>. Standard deduction wins — no itemized benefit this year.</>
                     }
                   </div>
@@ -877,7 +877,7 @@ export default function CPAProjections() {
               <div className="ts-frow"><label className="ts-fl" title="The overtime PREMIUM (the extra half of time-and-a-half) already INCLUDED in the Wages above. Do not add it again. Deduction: up to $12,500 ($25,000 joint, not MFS), reduced $100 per $1,000 of income over $150,000 ($300,000 joint). 2025–2028.">Qualified overtime premium (already in income) <span>OBBBA</span></label><input type="number" value={form.overtime} onChange={upd('overtime')} placeholder="0" /></div>
             </div>
           </div>
-          {error && <div style={{background:'var(--color-red-light)',color:'var(--color-red-dark)',padding:'10px 14px',borderRadius:'10px',fontSize:'13px'}}>{error}</div>}
+          {error && <div className="ts-note ts-alert-danger" role="alert">{error}</div>}
           <div style={{display:'flex',gap:'10px'}}>
             <button className="ts-btn ts-btn-secondary" style={{flex:1}} onClick={()=>setView('list')}>Cancel</button>
             <button className="ts-btn ts-btn-primary" style={{flex:2}} onClick={handleSave} disabled={saving} aria-busy={saving}>{saving?'Saving…':'Calculate & save →'}</button>
@@ -945,12 +945,12 @@ export default function CPAProjections() {
               setReparseId(r.id); setFile(null); setParsePreview(null); setError('');
               setView('new');
               setUploadClientId(r.client_id || '');
-            }}>↺ Re-import</button>
+            }}><Icon name="refresh" size={14} /> Re-import</button>
           <button className="ts-btn ts-btn-secondary ts-btn-sm" onClick={()=>exportRecords(r)}>Download records</button>
 <button className="ts-btn ts-btn-danger ts-btn-sm" onClick={()=>handleDelete(r.id)}>Delete</button>
           {totalCredits > 0
-            ? <Link to={`/cpa/video?returnId=${r.id}`} className="ts-btn ts-btn-primary">🎬 Walkthrough</Link>
-            : <Link to="/billing" className="ts-btn ts-btn-secondary ts-btn-sm" title={`0 credits remaining`}>🎬 Buy credits</Link>
+            ? <Link to={`/cpa/video?returnId=${r.id}`} className="ts-btn ts-btn-primary"><Icon name="video" /> Walkthrough</Link>
+            : <Link to="/billing" className="ts-btn ts-btn-secondary ts-btn-sm" title={`0 credits remaining`}><Icon name="video" /> Buy credits</Link>
           }
         </div>
       </div>
@@ -1031,10 +1031,10 @@ export default function CPAProjections() {
             const roth  = analyzeRothConversion(nextResult.taxableIncome, nextResult.agi, pd.filing_status || 'Single', projYr, nextInputs);   // priced on the full return
 
             const FLAG_DEFS = [
-              { key:'amtTriggered',          icon:'⚠', label:'AMT triggered',
+              { key:'amtTriggered',          icon:'warning', label:'AMT triggered',
                 ...(FEATURES.planningModules ? { action: 'Run scenario with ISO exercise timing', actionFn: () => { window.location.href = '/cpa/scenarios'; } } : {}),             color:'var(--color-red-soft)', detail: `Alternative minimum tax applies — $${Math.round(nextResult.amtLiability||0).toLocaleString()} liability` },
-              { key:'subjectToNIIT',         icon:'📈', label:'NIIT applies (3.8%)',        color:'var(--color-red-soft)', detail: `Net investment income tax on investment income` },
-              { key:'saltCapHit',            icon:'🏠', label:'SALT cap hit',               color:'var(--color-amber-mid)',
+              { key:'subjectToNIIT',         icon:'planning', label:'NIIT applies (3.8%)',        color:'var(--color-red-soft)', detail: `Net investment income tax on investment income` },
+              { key:'saltCapHit',            icon:'home', label:'SALT cap hit',               color:'var(--color-amber-mid)',
                 detail: (() => {
                   const saltPaid  = (pd.salt_income || pd.saltIncomeTaxesPaid || 0) + (pd.property_tax || pd.propertyTaxesPaid || 0);
                   const cap       = getBracketsForYear(projYr).saltCap || 10000;
@@ -1051,12 +1051,12 @@ export default function CPAProjections() {
                     ? `Itemizing — paid ${fmt(saltPaid)} in state/local taxes but can only deduct ${fmt(cap)}. ${fmt(lost)} of real deductions wiped out by the cap.`
                     : `State/local taxes exceed the ${fmt(cap)} SALT cap.`;
                 })() },
-              { key:'estimatedParameters',     icon:'⚠️', label:'Estimated tax tables',       color:'var(--color-amber-mid)', detail: `There are no official tax tables for this year yet, so 2026 figures were used. Treat this result as an estimate.` },
-              { key:'seniorDeductionApplies',icon:'👴', label:'Senior deduction applies',   color:'var(--color-mint)', detail: `Additional $6,000 deduction for age 65+ (OBBBA 2025–2028)` },
-              { key:'qbiApplies',            icon:'💼', label:'QBI deduction applies',      color:'var(--color-mint)', detail: `20% qualified business income deduction §199A` },
-              { key:'nearBracketBoundary',   icon:'⚡', label:'Near bracket boundary',      color:'var(--color-amber-mid)', detail: `Within ${fmt(roth.bracketHeadroom)} of the next tax bracket — strong Roth conversion or income-shifting window`,
+              { key:'estimatedParameters',     icon:'warning', label:'Estimated tax tables',       color:'var(--color-amber-mid)', detail: `There are no official tax tables for this year yet, so 2026 figures were used. Treat this result as an estimate.` },
+              { key:'seniorDeductionApplies',icon:'senior', label:'Senior deduction applies',   color:'var(--color-mint)', detail: `Additional $6,000 deduction for age 65+ (OBBBA 2025–2028)` },
+              { key:'qbiApplies',            icon:'briefcase', label:'QBI deduction applies',      color:'var(--color-mint)', detail: `20% qualified business income deduction §199A` },
+              { key:'nearBracketBoundary',   icon:'zap', label:'Near bracket boundary',      color:'var(--color-amber-mid)', detail: `Within ${fmt(roth.bracketHeadroom)} of the next tax bracket — strong Roth conversion or income-shifting window`,
                 action: 'View Roth conversion analysis ↓', actionFn: () => document.querySelector('[data-roth-anchor]')?.scrollIntoView({behavior:'smooth'}) },
-              { key:'irmaaRisk',             icon:'💊', label:'IRMAA Medicare risk',        color:'var(--color-red-soft)',
+              { key:'irmaaRisk',             icon:'health', label:'IRMAA Medicare risk',        color:'var(--color-red-soft)',
                 detail: (() => {
                   // Engine tables (CMS, verified). IRMAA looks back two years: this year's MAGI sets the premium two years out.
                   const magi = nextResult.agi || 0;
@@ -1064,8 +1064,8 @@ export default function CPAProjections() {
                   if (!ir.annualSurcharge) return `MAGI ${fmt(magi)} is near an IRMAA threshold; it sets Medicare premiums for ${projYr + 2}.`;
                   return `MAGI ${fmt(magi)} in ${projYr} would add about ${fmt(ir.annualSurcharge)} per person on Medicare to ${projYr + 2} Part B and D premiums.`;
                 })() },
-              { key:'tipsOrOvertimeDeduction',icon:'✅', label:'Tips/overtime deduction',     color:'var(--color-mint)', detail: `OBBBA deduction applied (capped, reduced at higher income) — lowers taxable income, not AGI` },
-              { key:'rentalLossSuspended', icon:'🏘', label:'Rental loss suspended (§469)', color:'var(--color-amber-mid)',
+              { key:'tipsOrOvertimeDeduction',icon:'success', label:'Tips/overtime deduction',     color:'var(--color-mint)', detail: `OBBBA deduction applied (capped, reduced at higher income) — lowers taxable income, not AGI` },
+              { key:'rentalLossSuspended', icon:'rental', label:'Rental loss suspended (§469)', color:'var(--color-amber-mid)',
                 detail: (() => {
                   const suspended = nextResult?.rentalPALSuspended || 0;
                   const agi_v = nextResult?.agi || 0;
@@ -1117,7 +1117,7 @@ export default function CPAProjections() {
                   </div>
                   {adjusted && (
                     <button onClick={() => setProjAdj(a => ({ ...NO_ADJ, yearsOut: a.yearsOut }))}
-                      style={{marginTop:10,padding:'6px 12px',background:'transparent',border:'1px solid var(--color-border)',borderRadius:8,fontSize:12,cursor:'pointer',fontFamily:'inherit',color:'var(--muted)'}}>
+                      className="ts-btn ts-btn-secondary ts-btn-sm" style={{ marginTop:10 }}>
                       Reset to carried-forward figures
                     </button>
                   )}
@@ -1182,7 +1182,7 @@ export default function CPAProjections() {
                     <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
                       {FLAG_DEFS.map(f => (
                         <div key={f.key} style={{display:'flex',alignItems:'flex-start',gap:'10px',padding:'10px 12px',borderRadius:'8px',background:'var(--bg)',border:'1px solid var(--border)'}}>
-                          <span style={{fontSize:'14px',flexShrink:0,marginTop:1}}>{f.icon}</span>
+                          <span style={{flexShrink:0,marginTop:1,color:'var(--brand)'}}><Icon name={f.icon} size={15} /></span>
                           <div style={{flex:1}}>
                             <div style={{fontSize:'12px',fontWeight:700,color:'var(--dark)'}}>{f.label}</div>
                             <div style={{fontSize:'11px',color:'var(--muted)',marginTop:'2px',lineHeight:1.5}}>{f.detail}</div>
@@ -1246,7 +1246,7 @@ export default function CPAProjections() {
                         ))}
                       </div>
                       {shortfall > 1000 && (
-                        <div style={{marginTop:10,padding:'8px 10px',background:'var(--amber-bg)',borderRadius:8,fontSize:11.5,color:'var(--color-amber-dark)',lineHeight:1.6}}>
+                        <div className="ts-note ts-alert-warning ts-note-compact" style={{ marginTop:10 }}>
                           Recommend {fmt(Math.round(shortfall/4))} quarterly estimated payments (Q1–Q4) to meet safe harbor.
                         </div>
                       )}
@@ -1267,7 +1267,7 @@ export default function CPAProjections() {
                         <div key={s.label} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',borderRadius:'8px',background: s.crossesBracket ? 'var(--amber-bg)' : 'var(--purple3)',border:`1px solid ${s.crossesBracket ? 'var(--color-amber-border)' : 'var(--color-purple-5)'}`}}>
                           <div>
                             <div style={{fontSize:'12px',fontWeight:600,color:'var(--dark)'}}>{s.label}</div>
-                            <div style={{fontSize:'10px',color:'var(--muted)'}}>{s.crossesBracket ? `⚠ crosses to ${(s.newMarginalRate*100).toFixed(0)}% bracket` : `stays in ${(roth.currentMarginalRate*100).toFixed(0)}% bracket`}</div>
+                            <div style={{fontSize:'10px',color:'var(--muted)'}}>{s.crossesBracket ? `crosses to ${(s.newMarginalRate*100).toFixed(0)}% bracket` : `stays in ${(roth.currentMarginalRate*100).toFixed(0)}% bracket`}</div>
                           </div>
                           <div style={{textAlign:'right'}}>
                             <div style={{fontSize:'13px',fontWeight:700,color:'var(--dark)'}}>{fmt(s.taxCost)}</div>
@@ -1295,7 +1295,7 @@ export default function CPAProjections() {
                       setExportMsg(ok ? '' : 'Your browser blocked the pop-up. Allow pop-ups for this site, then try again.');
                     }}
                   >
-                    📄 Export summary PDF <span style={{fontSize:'11px',fontWeight:400,color:'var(--muted)',marginLeft:'6px'}}>free · no credit</span>
+                    <Icon name="file" /> Export summary PDF <span style={{fontSize:'11px',fontWeight:400,color:'var(--muted)',marginLeft:'6px'}}>free · no credit</span>
                   </button>
                   {exportMsg && <div role="alert" style={{fontSize:'12px',color:'var(--color-red-dark)',background:'var(--color-red-light)',padding:'8px 12px',borderRadius:'8px'}}>{exportMsg}</div>}
 
@@ -1303,7 +1303,7 @@ export default function CPAProjections() {
                   {totalCredits > 0 ? (
                     <div style={{background:'var(--purple3)',border:'1px solid var(--color-purple-5)',borderRadius:'14px',padding:'18px'}}>
                       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'6px'}}>
-                        <div style={{fontSize:'14px',fontWeight:700,color:'var(--dark)'}}>🎬 Generate walkthrough</div>
+                        <div style={{fontSize:'14px',fontWeight:700,color:'var(--dark)'}}><Icon name="video" /> Generate walkthrough</div>
                         <span style={{fontSize:'11px',fontWeight:700,padding:'3px 8px',background:'var(--purple)',color:'#fff',borderRadius:'20px'}}>1 credit</span>
                       </div>
                       <div style={{fontSize:'12px',color:'var(--muted)',marginBottom:'12px'}}>
@@ -1320,7 +1320,7 @@ export default function CPAProjections() {
                   ) : (
                     isBasicTier ? (
                       <div style={{background:'var(--purple3)',border:'1px solid var(--color-purple-5)',borderRadius:'14px',padding:'18px'}}>
-                        <div style={{fontSize:'14px',fontWeight:700,color:'var(--dark)',marginBottom:'6px'}}>🎬 Walkthroughs are included with Pro</div>
+                        <div style={{fontSize:'14px',fontWeight:700,color:'var(--dark)',marginBottom:'6px'}}><Icon name="video" /> Walkthroughs are included with Pro</div>
                         <div style={{fontSize:'12px',color:'var(--muted)',marginBottom:'12px',lineHeight:1.5}}>
                           Your plan doesn't include walkthrough credits. Upgrade to Pro, or buy a credit pack as you go. You can still send the PDF summary above.
                         </div>
@@ -1328,7 +1328,7 @@ export default function CPAProjections() {
                       </div>
                     ) : (
                     <div style={{background:'var(--color-amber-pale)',border:'1px solid var(--color-amber-border)',borderRadius:'14px',padding:'18px'}}>
-                      <div style={{fontSize:'14px',fontWeight:700,color:'var(--color-amber-dark)',marginBottom:'6px'}}>🎬 Generate walkthrough</div>
+                      <div style={{fontSize:'14px',fontWeight:700,color:'var(--color-amber-dark)',marginBottom:'6px'}}><Icon name="video" /> Generate walkthrough</div>
                       <div style={{fontSize:'12px',color:'var(--color-amber-dark)',marginBottom:'12px',lineHeight:1.5}}>
                         You're out of walkthrough credits. Buy a pack to generate a personalized client walkthrough — or share the PDF summary above to start the conversation.
                       </div>

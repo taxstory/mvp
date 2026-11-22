@@ -17,6 +17,9 @@ import { callFunction } from '../../utils/callFunction';
 import { downloadRecords } from '../../utils/records';
 import { usePrivacyMode } from '../../hooks/usePrivacyMode';
 import { useToast } from '../../components/ui/Toast';
+import { EmptyState, Button } from '../../components/ui';
+import { Users, Plus, SearchX } from 'lucide-react';
+import { Icon, IconLabel } from '../../components/Icon';
 
 export default function ClientsPage() {
   const confirm = useConfirm();
@@ -230,20 +233,17 @@ export default function ClientsPage() {
         </div>
 
         {loading ? (
-          <div style={{textAlign:'center',padding:'40px',color:'var(--muted)'}}>Loading…</div>
+          <div className="ts-loading" role="status">Loading…</div>
         ) : filtered.length === 0 ? (
-          <div style={{textAlign:'center',padding:'40px'}}>
-            <div style={{fontSize:'36px',marginBottom:'12px'}}>👤</div>
-            <div style={{fontSize:'14px',color:'var(--muted)',marginBottom:'16px'}}>
-              {search ? 'No clients match your search.' : 'No clients yet. Add your first client to get started.'}
-            </div>
-            {!search && <button className="ts-btn ts-btn-primary" onClick={openNew}>+ Add first client</button>}
-          </div>
+          search
+            ? <EmptyState icon={SearchX} size="sm" title="No matches" body={`No client matches “${search}”.`} />
+            : <EmptyState icon={Users} title="No clients yet" body="Add a client by nickname or initials to start a projection or walkthrough."
+                action={<Button icon={Plus} onClick={openNew}>Add first client</Button>} />
         ) : (
           <>
           {/* Bulk action bar — visible when any rows checked */}
           {selected.size > 0 && (
-            <div style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',background:'var(--color-blue-bg)',borderRadius:9,marginBottom:10,border:'1px solid var(--color-blue-tab)'}}>
+            <div className="ts-note ts-alert-info" style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
               <span style={{fontSize:12.5,fontWeight:600,color:'var(--color-blue)'}}>{selected.size} client{selected.size>1?'s':''} selected</span>
               <button className="ts-btn ts-btn-sm" onClick={()=>setSelectedIds(new Set())}
                 style={{background:'transparent',color:'var(--color-muted)',border:'1px solid var(--color-border)',padding:'3px 10px'}}>
@@ -251,7 +251,7 @@ export default function ClientsPage() {
               </button>
               <button className="ts-btn ts-btn-sm ts-btn-danger" onClick={handleBulkDelete}
                 style={{marginLeft:'auto'}}>
-                🗑 Delete selected
+                <Icon name="delete" /> Delete selected
               </button>
             </div>
           )}
@@ -330,7 +330,7 @@ export default function ClientsPage() {
           </div>
           {labelsOnly ? (
             <div style={{fontSize:12,color:'var(--muted)',background:'var(--purple4)',border:'1px solid var(--border)',borderRadius:10,padding:'10px 12px',marginBottom:14,lineHeight:1.6}}>
-              🔒 <strong>Labels-only mode is on.</strong> TaxStory does not store client emails or phone numbers. When you send a walkthrough you can type the
+              <Icon name="lock" /> <strong>Labels-only mode is on.</strong> TaxStory does not store client emails or phone numbers. When you send a walkthrough you can type the
               recipient's address — it is used once and not saved — or copy the link. You can change this in Settings.
             </div>
           ) : (
@@ -341,7 +341,7 @@ export default function ClientsPage() {
           )}
           <div className="ts-frow"><label className="ts-fl">Notes <span>optional</span></label><textarea value={form.notes} onChange={upd('notes')} style={{height:'80px',resize:'none'}} placeholder="Any relevant notes…" /></div>
         </div>
-        {error && <div style={{background:'var(--color-red-light)',border:'1px solid var(--color-red-border)',color:'var(--color-red-dark)',padding:'10px 14px',borderRadius:'10px',fontSize:'13px'}}>{error}</div>}
+        {error && <div className="ts-note ts-alert-danger" role="alert">{error}</div>}
         <div style={{display:'flex',gap:'10px'}}>
           <button className="ts-btn ts-btn-secondary" style={{flex:1}} onClick={()=>setView('list')}>Cancel</button>
           <button className="ts-btn ts-btn-primary" style={{flex:2}} onClick={handleSave} disabled={saving} aria-busy={saving}>{saving?'Saving…':view==='new'?'Add client':'Save changes'}</button>
@@ -369,7 +369,7 @@ export default function ClientsPage() {
         <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
           <button className="ts-btn ts-btn-secondary ts-btn-sm"
             onClick={() => { generatePortalLink(c.id); }}>
-            🔗 {c.portal_token ? 'Refresh portal link' : 'Generate portal link'}
+            <Icon name="link" /> {c.portal_token ? 'Refresh portal link' : 'Generate portal link'}
           </button>
           <button className="ts-btn ts-btn-secondary ts-btn-sm" onClick={()=>exportRecords(c)}>Download records</button>
           <button className="ts-btn ts-btn-danger ts-btn-sm" onClick={()=>handleDelete(c.id)}>Delete</button>
@@ -393,7 +393,7 @@ export default function ClientsPage() {
                     const exp = c.portal_token_expires_at ? new Date(c.portal_token_expires_at) : null;
                     const fmt = d => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
                     const opened = c.portal_access_count > 0 && c.portal_last_accessed_at ? `Opened ${c.portal_access_count}× · last ${fmt(new Date(c.portal_last_accessed_at))}` : 'Not opened yet';
-                    return `${exp ? (exp < new Date() ? '⚠ Expired ' : 'Expires ') + fmt(exp) : 'No expiry set'} · ${opened}. "Refresh" starts a new window; "Revoke" removes access.`;
+                    return `${exp ? (exp < new Date() ? 'Expired ' : 'Expires ') + fmt(exp) : 'No expiry set'} · ${opened}. "Refresh" starts a new window; "Revoke" removes access.`;
                   })()}
                 </span>
                 <button
@@ -403,7 +403,7 @@ export default function ClientsPage() {
                     setPortalUrl('');
                     setClients(prev => prev.map(cl => cl.id === c.id ? {...cl, portal_token: null} : cl));
                   }}
-                  style={{color:'var(--color-red-dark)',background:'transparent',border:'none',cursor:'pointer',fontSize:11,fontWeight:600,fontFamily:'inherit',padding:0,flexShrink:0,marginLeft:12}}>
+                  className="ts-link-btn ts-link-danger" style={{ flexShrink:0, marginLeft:12 }}>
                   Revoke access
                 </button>
               </div>
@@ -439,9 +439,9 @@ export default function ClientsPage() {
             defaultValue={c.notes||''}
             onBlur={async e => {
               const idErr = identifierError(e.target.value, 'Notes');
-              if (idErr) { window.alert(idErr); return; }
+              if (idErr) { toast(idErr, { variant: 'danger', duration: 6000 }); return; }
               const { error: nErr } = await supabase.from('clients').update({notes: e.target.value}).eq('id', c.id);
-              if (nErr) { window.alert(`Could not save notes: ${nErr.message}`); return; }
+              if (nErr) { toast(`Could not save notes: ${nErr.message}`, { variant: 'danger', duration: 6000 }); return; }
               setClients(prev => prev.map(cl => cl.id === c.id ? {...cl, notes: e.target.value} : cl));
               // Brief visual feedback so CPA knows the save happened
               const el = e.target;
@@ -482,11 +482,11 @@ function ClientReturns({ clientId, clientName }) {
 
   function statusPill(status) {
     const map = {
-      parsed:      ['📊 Parsed',     'ts-p-dark'],
-      script_ready:['📝 Script',     'ts-p-dark'],
-      audio_ready: ['🎬 Walkthrough ready','ts-p-green'],
+      parsed:      ['Parsed',     'ts-p-dark'],
+      script_ready:['Script',     'ts-p-dark'],
+      audio_ready: ['Walkthrough ready','ts-p-green'],
       parsing:     ['⏳ Parsing…',   'ts-p-gray'],
-      error:       ['⚠️ Error',      'ts-p-red'],
+      error:       ['Error',      'ts-p-red'],
     };
     const [label, cls] = map[status] || ['Unknown', 'ts-p-gray'];
     return <span className={`ts-pill ${cls}`}>{label}</span>;
@@ -505,10 +505,10 @@ function ClientReturns({ clientId, clientName }) {
       </div>
 
       {loading ? (
-        <div style={{color:'var(--muted)',fontSize:13,padding:'12px 0'}}>Loading…</div>
+        <div className="ts-loading" role="status">Loading…</div>
       ) : returns.length === 0 ? (
         <div style={{textAlign:'center',padding:'24px 0',color:'var(--muted)',fontSize:13}}>
-          <div style={{fontSize:28,marginBottom:8}}>📄</div>
+          <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom: 8 }}><Icon name="file" size={24} /></div>
           No returns yet for {clientName}. Import one from Tax Projections.
         </div>
       ) : (
@@ -532,10 +532,10 @@ function ClientReturns({ clientId, clientName }) {
                     <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
                       <a href={`/cpa/projections?id=${r.id}`} className="ts-btn ts-btn-ghost ts-btn-sm">View →</a>
                       {r.status === 'audio_ready' && (
-                        <a href={`/cpa/video?returnId=${r.id}`} className="ts-btn ts-btn-secondary ts-btn-sm">🎬 Video</a>
+                        <a href={`/cpa/video?returnId=${r.id}`} className="ts-btn ts-btn-secondary ts-btn-sm"><Icon name="video" /> Video</a>
                       )}
                       {r.pdf_summary_url && (
-                        <SignedLink value={r.pdf_summary_url} className="ts-btn ts-btn-secondary ts-btn-sm">📄 PDF</SignedLink>
+                        <SignedLink value={r.pdf_summary_url} className="ts-btn ts-btn-secondary ts-btn-sm"><Icon name="file" /> PDF</SignedLink>
                       )}
                     </div>
                   </td>

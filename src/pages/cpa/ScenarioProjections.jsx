@@ -13,6 +13,7 @@ import {
   calcFullFederalTax, calcScenarios, taxOptionsFor,
   calc1041Tax, calc1065Results, calc1120Tax, calc1120SResults,
 } from '../../utils/taxEngine';
+import { Icon, IconLabel } from '../../components/Icon';
 
 // ── Fast number formatter ─────────────────────────────────────────────────────
 // toLocaleString is convenient but calls into the browser's ICU/locale subsystem.
@@ -170,7 +171,7 @@ export default function ScenarioProjections() {
   // Scenario presets — common planning situations as starting points
   const PRESETS = {
     roth_conversion: {
-      label: '🔄 Roth Conversion',
+      label: 'Roth Conversion',
       scenarios: [
         {...blankScenario('No Conversion'),    wages:150000, filingStatus:'Married filing jointly', federalWithholding:22000},
         {...blankScenario('Convert $25K'),     wages:150000, filingStatus:'Married filing jointly', federalWithholding:22000},
@@ -178,7 +179,7 @@ export default function ScenarioProjections() {
       ],
     },
     salary_vs_distrib: {
-      label: '💼 Salary vs Distribution',
+      label: 'Salary vs Distribution',
       scenarios: [
         {...blankScenario('All W-2'),          wages:200000, filingStatus:'Single', estimatedPayments:40000},
         {...blankScenario('$100K Sal + Dist'), wages:100000, businessIncome:100000, filingStatus:'Single', estimatedPayments:40000},
@@ -186,7 +187,7 @@ export default function ScenarioProjections() {
       ],
     },
     capital_gains_timing: {
-      label: '📈 Capital Gains Timing',
+      label: 'Capital Gains Timing',
       scenarios: [
         {...blankScenario('Realize in 2026'), wages:80000, ltcg:50000, filingStatus:'Single', federalWithholding:14000},
         {...blankScenario('Defer to 2027'),   wages:80000, ltcg:0,     filingStatus:'Single', federalWithholding:14000},
@@ -324,8 +325,8 @@ export default function ScenarioProjections() {
           )}
           <div style={{position:'relative'}}>
             <button onClick={()=>setShowPresets(p=>!p)}
-              style={{padding:'7px 13px',background:'var(--bg)',color:'var(--purple)',border:'1px solid var(--color-blue-mid-bg)',borderRadius:9,fontSize:12.5,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
-              📋 Templates ▾
+              className="ts-btn ts-btn-secondary ts-btn-sm" aria-expanded={showPresets}>
+              <Icon name="clipboard" /> Templates ▾
             </button>
             {showPresets && (
               <div style={{position:'absolute',top:'calc(100% + 4px)',right:0,background:'#fff',border:'1px solid var(--color-border)',
@@ -351,17 +352,16 @@ export default function ScenarioProjections() {
             )}
           </div>
           <button onClick={saveScenarios} disabled={saving} aria-busy={saving}
-            style={{padding:'7px 13px',background:'var(--purple3)',color:'var(--purple)',border:'none',borderRadius:9,fontSize:12.5,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
-            {savedMsg || (saving ? 'Saving…' : '💾 Save')}
+            className="ts-btn ts-btn-primary ts-btn-sm">
+            {savedMsg || (saving ? 'Saving…' : 'Save')}
           </button>
           <button onClick={exportCSV}
-            style={{padding:'7px 13px',background:'var(--color-green-light)',color:'var(--color-green-dark)',border:'1px solid var(--color-green-very)',borderRadius:9,fontSize:12.5,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
+            className="ts-btn ts-btn-secondary ts-btn-sm">
             ↓ CSV
           </button>
         </div>
         {presetToast && (
-          <div style={{marginTop:8,padding:'9px 14px',background:'var(--color-green-light)',border:'1px solid var(--color-green-check)',
-            borderRadius:9,fontSize:12.5,color:'var(--color-green-dark)',fontWeight:500,display:'flex',alignItems:'center',gap:8}}>
+          <div className="ts-note ts-alert-success ts-note-compact" role="status" style={{ marginTop:8, fontWeight:500, display:'flex', alignItems:'center', gap:8 }}>
             <span>✓</span> {presetToast}
           </div>
         )}
@@ -773,7 +773,7 @@ export default function ScenarioProjections() {
                           .filter(([, v]) => v)
                           .map(([k]) => (
                             <div key={k} style={{ fontSize: 10, color: 'var(--muted)', padding: '2px 0', display: 'flex', gap: 4 }}>
-                              <span>⚑</span>
+                              <span><Icon name="flag" /> </span>
                               <span>{k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}</span>
                             </div>
                           ))
@@ -820,7 +820,7 @@ export default function ScenarioProjections() {
                 <CompRow label="Per-Partner Ordinary Income" bold values={results.map(r => fmt(r.perPartner?.ordinaryIncome))} highlight />
                 <CompRow label="Per-Partner Cash Distribution" values={results.map(r => fmt(r.perPartner?.cashDistribution))} />
                 <div style={{ marginTop: 12, padding: 10, background: 'var(--color-soft)', borderRadius: 8, fontSize: 11, color: 'var(--muted)', lineHeight: 1.6 }}>
-                  ⚠ {formType === '1065' ? 'Partnerships' : 'S-Corps'} pay no entity-level federal income tax. All items flow through to {formType === '1065' ? 'partners' : 'shareholders'} via K-1.
+                  <Icon name="warning" /> {formType === '1065' ? 'Partnerships' : 'S-Corps'} pay no entity-level federal income tax. All items flow through to {formType === '1065' ? 'partners' : 'shareholders'} via K-1.
                 </div>
               </>
             )}
@@ -848,7 +848,7 @@ export default function ScenarioProjections() {
             )}
 
             <div style={{ marginTop: 14, fontSize: 10, color: 'var(--color-muted-light)', lineHeight: 1.5, borderTop: '1px solid var(--color-gray-bg)', paddingTop: 10 }}>
-              ⚠ FOR DISCUSSION PURPOSES ONLY. This model provides estimates based on {year} projected rates.
+              <Icon name="warning" /> FOR DISCUSSION PURPOSES ONLY. This model provides estimates based on {year} projected rates.
               Always confirm with current IRS guidance. Not tax advice.
             </div>
           </div>

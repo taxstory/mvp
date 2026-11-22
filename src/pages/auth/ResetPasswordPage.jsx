@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { Icon, IconLabel } from '../../components/Icon';
 
 export default function ResetPasswordPage() {
   const { resetPassword } = useAuth();
@@ -28,7 +29,7 @@ export default function ResetPasswordPage() {
         <div className="w-full max-w-sm">
           {sent ? (
             <div className="text-center">
-              <div className="text-5xl mb-4">📬</div>
+              <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom: 16 }}><Icon name="mail" size={24} /></div>
               <h2 className="font-serif text-2xl font-bold text-brand-dark mb-2">Check your email</h2>
               <p className="text-gray-500 text-sm">We sent a reset link to <strong>{email}</strong>.</p>
               <Link to="/login" className="block mt-6 text-sm text-brand-purple hover:underline">Back to sign in</Link>

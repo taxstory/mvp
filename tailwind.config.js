@@ -4,18 +4,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Read from src/styles/tokens.css so marketing and the app cannot drift. <alpha-value> keeps bg-brand-purple/10 working.
         brand: {
-          purple: '#6B5CE7',
-          'purple-hover': '#5A4BD6',   // the one hover shade, shared with the app's .ts-btn-primary
-          dark:   '#1A1230',
-          light:  '#F4F2FF',
+          purple:         'rgb(var(--brand-rgb) / <alpha-value>)',
+          'purple-hover': 'var(--brand-hover)',
+          dark:           'rgb(var(--text-rgb) / <alpha-value>)',
+          light:          'var(--brand-wash)',
         },
         teal: {
           50:  '#E8F4F4',
-          600: '#0D7A7A',
+          600: 'var(--planning)',
           700: '#0A6060',
         },
-        navy: '#1B2A4A',
       },
       fontFamily: {
         sans:  ['Inter', 'system-ui', 'sans-serif'],

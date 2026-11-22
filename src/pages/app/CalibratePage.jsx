@@ -72,14 +72,14 @@ export default function CalibratePage() {
       {items.map((it, i) => (
         <div key={i} className="ts-card" style={{ marginTop: 14 }}>
           <div className="ts-card-title">{it.name}
-            <span className="ts-card-sub">{it.error ? `⚠ ${it.error}` : `${it.vendor?.name || 'Unknown software'} · ${it.taxYear || 'year ?'} · ${it.filingStatus || 'status ?'} · quality: ${it.quality}`}</span>
+            <span className="ts-card-sub">{it.error ? `${it.error}` : `${it.vendor?.name || 'Unknown software'} · ${it.taxYear || 'year ?'} · ${it.filingStatus || 'status ?'} · quality: ${it.quality}`}</span>
           </div>
           {!it.error && (
             <>
               <div style={{ fontSize: 12, margin: '6px 0 10px' }}>
                 {it.checks.map(c => (
                   <div key={c.id} style={{ color: c.status === 'warn' ? 'var(--color-red-dark)' : c.status === 'pass' ? 'var(--green-dark)' : 'var(--muted)' }}>
-                    {c.status === 'pass' ? '✓' : c.status === 'warn' ? '⚠' : '–'} {c.label}{c.status === 'warn' ? ` — ${c.detail}` : ''}
+                    {c.status === 'pass' ? '✓' : c.status === 'warn' ? '' : '–'} {c.label}{c.status === 'warn' ? ` — ${c.detail}` : ''}
                   </div>
                 ))}
               </div>

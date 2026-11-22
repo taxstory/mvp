@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { Icon, IconLabel } from '../../components/Icon';
 
 export default function SignUpPage() {
   const { signUp }  = useAuth();
@@ -29,7 +30,7 @@ export default function SignUpPage() {
   if (success) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
       <div className="max-w-sm text-center">
-        <div className="text-5xl mb-4">📬</div>
+        <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom: 16 }}><Icon name="mail" size={24} /></div>
         <h2 className="font-serif text-2xl font-bold text-brand-dark mb-2">Check your email</h2>
         <p className="text-gray-500 text-sm">We sent a confirmation link to <strong>{form.email}</strong>. Click it to activate your account and start your 14-day free trial.</p>
         <Link to="/login" className="block mt-6 text-sm text-brand-purple hover:underline">Back to sign in</Link>
@@ -47,7 +48,7 @@ export default function SignUpPage() {
       <div className="flex-1 flex items-center justify-center px-6 pb-12">
         <div className="w-full max-w-sm">
           <div className="bg-brand-purple/10 text-brand-purple text-xs font-semibold px-3 py-1.5 rounded-full w-fit mb-4">
-            ⭐ 14-Day Free Trial · No Credit Card Required
+            <Icon name="star" size={13} /> 14-Day Free Trial · No Credit Card Required
           </div>
           <h1 className="font-serif text-3xl font-bold text-brand-dark mb-2">Create your account</h1>
           <p className="text-gray-500 text-sm mb-8">Start your free trial and join founding members who locked in early pricing.</p>

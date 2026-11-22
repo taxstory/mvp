@@ -1,94 +1,168 @@
-/* src/styles/tokens.css */
+/* src/styles/tokens.css — THE single source of TaxStory's design values.
+ *
+ * Three layers, in this order:
+ *   1. Semantic tokens (what new code should use): --brand, --text, --surface, --success, --fs-*, --sp-*, --r-*, --shadow-*.
+ *   2. The palette (--color-*): every colour the app uses, now defined once. Conflicting duplicates point at the semantic layer.
+ *   3. Legacy short names (--purple, --muted, --dark, --bg…) kept as ALIASES so existing pages keep working.
+ *      Move code to layer 1 when you touch it; delete an alias once nothing references it.
+ *
+ * Tailwind (marketing + sign-in pages) reads these same variables via tailwind.config.js, so the two cannot drift.
+ * Values are the ones the product already shows; the only deliberate changes are the status colours (see "Status").
+ */
 
 :root {
+  /* ── 1. Semantic ─────────────────────────────────────────────────────────────────────────────────── */
   /* Brand */
-  --color-purple:      #6B5CE7;
-  --color-purple-2:    #3D2E80;
-  --color-purple-3:    #EEEAFF;
-  --color-purple-4:    #F4F2FF;
-  --color-purple-5:    #AFA9EC;
-  --color-purple-light:#DDD8FF;
-  --color-purple-pale: #B8B0FF;
-  --color-purple-tint: #E8E6F8;
-  --color-purple-wash: #F0EEF8;
-  --color-purple-faint:#F0EEF8;
-  --color-purple-grad: #9D8BFF;
+  --brand:        #6B5CE7;
+  --brand-rgb:    107 92 231;          /* for Tailwind opacity modifiers (bg-brand-purple/10) */
+  --brand-hover:  #5A4BD6;
+  --brand-deep:   #3D2E80;
+  --brand-tint:   #EEEAFF;             /* selected, ghost buttons */
+  --brand-wash:   #F4F2FF;             /* page background */
 
-  /* Neutrals */
-  --color-dark:        #1A1230;
-  --color-muted:       #6B698A;
-  --color-muted-light: #A0A0C0;
-  --color-muted-border:#C0BDD8;
-  --color-border:      #E2DFF8;
-  --color-bg:          #F7F6FF;
-  --color-white:       #FFFFFF;
-  --color-soft:        #F9F8FF;
-  --color-soft-white:  #FAFAFE;
-  --color-gray-muted:  #C4C2D8;
-  --color-gray-bg:     #F3F2FA;
-  --color-gray-light:  #F3F4F6;
+  /* Text */
+  --text:         #1A1230;
+  --text-rgb:     26 18 48;
+  --text-muted:   #6B698A;             /* 5.2:1 on white */
+  --text-subtle:  #727290;             /* 4.65:1 on white — the lightest grey allowed for text (WCAG AA) */
 
-  /* Greens */
-  --color-green:       #1baf7a;
-  --color-green-mid:   #059669;
-  --color-green-dark:  #065F46;
-  --color-green-bg:    #D1FAE5;
-  --color-green-light: #F0FDF4;
-  --color-green-pale:  #BBF7D0;
-  --color-green-very:  #BBF7D0;
-  --color-green-check: #A7F3D0;
-  --color-mint:        #5DCAA5;
-  --color-mint-light:  #E1F5EE;
-  --color-green-mint:  #9FE1CB;
-  --color-green-deep:  #0F6E56;
-  --color-green-vivid: #22C55E;
+  /* Surfaces */
+  --surface:      #FFFFFF;
+  --surface-page: #F4F2FF;
+  --surface-soft: #F7F6FF;             /* read-only fields, inset panels */
+  --surface-dark: #1A1230;             /* sidebar, hero panels */
+  --border:       #E2DFF8;
+  --border-strong:#C0BDD8;
 
-  /* Ambers */
-  --color-amber:       #D97706;
-  --color-amber-mid:   #FCD34D;
-  --color-amber-vivid: #F59E0B;
-  --color-amber-bg:    #FEF3C7;
-  --color-amber-light: #FEF3C7;
-  --color-amber-pale:  #FFF9E6;
-  --color-amber-dark:  #92400E;
-  --color-amber-border:#FDE68A;
-  --color-yellow:      #FFD60A;
+  /* Status. One set each. Before: green was #22C55E in one file and #1BAF7A in another (both too pale to read as text),
+     red #EF4444 vs #E24B4A, amber #F59E0B vs #D97706. Base = fills, icons, bold figures; -text = small text on white; -bg = banners. */
+  --success:      #059669;  --success-text: #065F46;  --success-bg: #D1FAE5;  --success-border: #A7F3D0;
+  --warning:      #D97706;  --warning-text: #92400E;  --warning-bg: #FEF3C7;  --warning-border: #FDE68A;
+  --danger:       #DC2626;  --danger-text:  #991B1B;  --danger-bg:  #FEE2E2;  --danger-border:  #FECACA;
+  --info:         #2563EB;  --info-text:    #1E40AF;  --info-bg:    #EFF6FF;  --info-border:    #BFDBFE;
+  --planning:     #0D7A7A;                              /* the planning / investment accent (marketing "teal") */
 
-  /* Reds */
-  --color-red:         #E24B4A;
-  --color-red-mid:     #DC2626;
-  --color-red-vivid:   #EF4444;
-  --color-red-bg:      #FEE2E2;
-  --color-red-light:   #FEE2E2;
-  --color-red-soft:    #F09595;
-  --color-red-dark:    #991B1B;
-  --color-red-border:  #FECACA;
-
-  /* Blues */
-  --color-blue:        #1E40AF;
-  --color-blue-mid:    #2563EB;
-  --color-blue-bg:     #EFF6FF;
-  --color-blue-border: #BFDBFE;
-  --color-blue-pale:   #F0F4FF;
-  --color-blue-light:  #DBEAFE;
-  --color-blue-mid-bg: #C4BEF8;
-  --color-blue-tab:    #BFDBFE;
-  --color-blue-btn:    #C4C2D8;
-  --color-teal:        #0891B2;
-  --color-violet:      #7C3AED;
-
-  /* Typography */
+  /* Type scale. 10px and half-pixel sizes are retired; 11px is the smallest text. */
+  --fs-xs: 11px;  --fs-sm: 12px;  --fs-md: 13px;  --fs-lg: 14px;  --fs-xl: 16px;  --fs-title: 22px;  --fs-display: 32px;
   --font-sans:  'Inter', system-ui, -apple-system, sans-serif;
   --font-serif: 'Playfair Display', Georgia, serif;
-  --font-mono:  'JetBrains Mono', 'Fira Code', monospace;
+  --font-mono:  'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  /* Spacing (4-point) */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px;  --sp-4: 16px;  --sp-5: 20px;  --sp-6: 24px;  --sp-8: 32px;
 
   /* Radius */
-  --radius-sm:  7px;
-  --radius-md:  10px;
-  --radius-lg:  13px;
-  --radius-xl:  16px;
-  --radius-2xl: 20px;
+  --r-sm: 8px;    /* inputs, small buttons, chips */
+  --r-md: 10px;   /* buttons */
+  --r-lg: 14px;   /* cards */
+  --r-xl: 20px;   /* dialogs, hero panels */
+  --r-pill: 999px;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(26, 18, 48, 0.06);
+  --shadow-md: 0 4px 16px rgba(26, 18, 48, 0.08);
+  --shadow-lg: 0 24px 80px rgba(26, 18, 48, 0.18);
+
+  /* Control heights */
+  --h-sm: 36px;  --h-md: 44px;
 
   /* Layout */
   --sidebar-width: 226px;
+
+  /* ── 2. Palette ──────────────────────────────────────────────────────────────────────────────────── */
+  --color-purple:       var(--brand);
+  --color-purple-2:     var(--brand-deep);
+  --color-purple-3:     var(--brand-tint);
+  --color-purple-4:     var(--brand-wash);
+  --color-purple-5:     #AFA9EC;
+  --color-purple-light: #DDD8FF;
+  --color-purple-pale:  #B8B0FF;
+  --color-purple-tint:  #E8E6F8;
+  --color-purple-wash:  #F0EEF8;
+  --color-purple-faint: var(--color-purple-wash);   /* duplicate name */
+  --color-purple-grad:  #9D8BFF;
+
+  --color-dark:         var(--text);
+  --color-muted:        var(--text-muted);
+  --color-muted-light:  var(--text-subtle);
+  --color-muted-border: var(--border-strong);
+  --color-border:       var(--border);
+  --color-bg:           var(--surface-soft);
+  --color-white:        var(--surface);
+  --color-soft:         #F9F8FF;
+  --color-soft-white:   #FAFAFE;
+  --color-gray-muted:   #C4C2D8;
+  --color-gray-bg:      #F3F2FA;
+  --color-gray-light:   #F3F4F6;
+
+  --color-green:        var(--success);
+  --color-green-mid:    var(--success);
+  --color-green-dark:   var(--success-text);
+  --color-green-bg:     var(--success-bg);
+  --color-green-light:  #F0FDF4;
+  --color-green-pale:   #BBF7D0;
+  --color-green-very:   var(--color-green-pale);    /* duplicate name */
+  --color-green-check:  var(--success-border);
+  --color-mint:         #5DCAA5;
+  --color-mint-light:   #E1F5EE;
+  --color-green-mint:   #9FE1CB;
+  --color-green-deep:   #0F6E56;
+  --color-green-vivid:  #22C55E;                    /* charts only — too pale for text */
+
+  --color-amber:        var(--warning);
+  --color-amber-mid:    #FCD34D;
+  --color-amber-vivid:  #F59E0B;                    /* charts and dots only */
+  --color-amber-bg:     var(--warning-bg);
+  --color-amber-light:  var(--warning-bg);          /* duplicate name */
+  --color-amber-pale:   #FFF9E6;
+  --color-amber-dark:   var(--warning-text);
+  --color-amber-border: var(--warning-border);
+  --color-yellow:       #FFD60A;
+
+  --color-red:          var(--danger);
+  --color-red-mid:      var(--danger);
+  --color-red-vivid:    #EF4444;                    /* charts only */
+  --color-red-bg:       var(--danger-bg);
+  --color-red-light:    var(--danger-bg);           /* duplicate name */
+  --color-red-soft:     #F09595;
+  --color-red-dark:     var(--danger-text);
+  --color-red-border:   var(--danger-border);
+
+  --color-blue:         var(--info-text);
+  --color-blue-mid:     var(--info);
+  --color-blue-bg:      var(--info-bg);
+  --color-blue-border:  var(--info-border);
+  --color-blue-pale:    #F0F4FF;
+  --color-blue-light:   #DBEAFE;
+  --color-blue-tab:     var(--info-border);
+  --color-lavender:     #C4BEF8;
+  --color-blue-mid-bg:  var(--color-lavender);       /* misnamed: it is lavender */
+  --color-blue-btn:     var(--color-gray-muted);     /* misnamed: it is grey */
+  --color-teal:         var(--planning);
+  --color-violet:       #7C3AED;
+
+  --radius-sm:  var(--r-sm);
+  --radius-md:  var(--r-md);
+  --radius-lg:  var(--r-lg);
+  --radius-xl:  var(--r-xl);
+  --radius-2xl: var(--r-xl);
+
+  /* ── 3. Legacy short names (aliases) ─────────────────────────────────────────────────────────────── */
+  --purple:      var(--brand);
+  --purple2:     #8B7EF0;
+  --purple3:     var(--brand-tint);
+  --dark:        var(--text);
+  --mid:         var(--brand-deep);
+  --white:       var(--surface);
+  --bg:          var(--surface-page);
+  --card:        var(--surface);
+  --muted:       var(--text-muted);
+  --muted-light: var(--text-subtle);
+  --green:       var(--success);
+  --green-dark:  var(--success-text);
+  --green-bg:    var(--success-bg);
+  --amber:       var(--warning);
+  --amber-bg:    var(--warning-bg);
+  --red:         var(--danger);
+  --teal:        var(--planning);
 }

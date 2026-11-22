@@ -3,24 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── TaxStory Brand Tokens ─── */
-:root {
-  --purple:  #6B5CE7;
-  --purple2: #8B7EF0;
-  --purple3: #EEEAFF;
-  --dark:    #1A1230;
-  --mid:     #3D2E80;
-  --white:   #FFFFFF;
-  --bg:      #F4F2FF;
-  --card:    #FFFFFF;
-  --border:  #E2DFF8;
-  --text:    #1A1433;
-  --muted:   #6B698A;
-  --green:   #22C55E;
-  --amber:   #F59E0B;
-  --red:     #EF4444;
-  --teal:    #0ABFBF;
-}
+/* Design tokens live in src/styles/tokens.css (the single source). */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -94,7 +77,7 @@ body {
 .ts-ni:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.85); }
 .ts-ni.active,
 .ts-ni.ts-active { background: var(--purple); color: white; font-weight: 600; }
-.ts-ni-ic { width: 16px; text-align: center; flex-shrink: 0; font-size: 13px; }
+.ts-ni-ic { width: 16px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .ts-ni-badge {
   margin-left: auto;
   font-size: 9px;
@@ -156,11 +139,21 @@ body {
 .ts-btn:hover   { opacity: 0.88; }
 .ts-btn:active  { transform: scale(0.98); }
 .ts-btn-primary   { background: var(--purple); color: white; }
-.ts-btn-primary:hover { background: #5A4BD6; opacity: 1; }   /* same hover shade as the marketing pages (brand-purple-hover) */
+.ts-btn-primary:hover { background: var(--brand-hover); opacity: 1; }   /* same hover shade as the marketing pages (brand-purple-hover) */
 .ts-btn-secondary { background: white; border: 1.5px solid var(--border); color: var(--dark); font-weight: 500; }
 .ts-btn-ghost     { background: var(--purple3); color: var(--purple); border: none; }
-.ts-btn-danger    { background: #FEE2E2; color: var(--red); border: none; }
+.ts-btn-danger    { background: var(--danger-bg); color: var(--danger-text); border: none; }
 .ts-btn-sm        { padding: 6px 12px; font-size: 12px; border-radius: 8px; min-height: 36px; }
+.ts-btn-block     { width: 100%; justify-content: center; }
+.ts-btn-destructive { background: var(--danger); color: white; }   /* only for the final, irreversible confirm */
+.ts-btn-success   { background: var(--success); color: white; }         /* momentary confirmation, e.g. "Copied" */
+/* Text-style action (no button chrome): "Edit script", "Generate another". Same colour and weight everywhere. */
+.ts-link-btn { background: none; border: none; padding: 2px 0; cursor: pointer; color: var(--brand); font: 600 var(--fs-md)/1.4 var(--font-sans); display: inline-flex; align-items: center; gap: 5px; text-align: left; }
+.ts-link-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
+.ts-link-danger { color: var(--danger-text); }
+.ts-link-btn:disabled { color: var(--text-subtle); cursor: not-allowed; text-decoration: none; }
+.ts-btn svg       { flex-shrink: 0; }
+.ts-tbl td > .ts-btn + .ts-btn, .ts-tbl td > * + .ts-btn { margin-left: 6px; }   /* action buttons in table cells never touch */
 
 /* States. Disabled must LOOK disabled (before this, 19 disabled buttons looked fully clickable).
    Busy (aria-busy="true", set on buttons while they save/load) shows a spinner and keeps the label. */
@@ -200,6 +193,59 @@ button[aria-busy="true"]::before {
   justify-content: space-between;
 }
 .ts-card-sub { font-size: 11px; font-weight: 400; color: var(--muted); }
+.ts-card-selected { border-color: var(--brand); background: var(--brand-wash); }
+.ts-card-flush    { background: var(--surface-soft); border-color: transparent; }
+.ts-card-head     { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.ts-card-head .ts-card-title { margin: 0; }
+.ts-card-head .ts-card-sub   { margin-top: 3px; }
+.ts-card-action   { flex-shrink: 0; }
+.ts-card-body     { line-height: 1.6; }
+.ts-card-footer   { margin-top: var(--sp-4); padding-top: var(--sp-3); border-top: 1px solid var(--border); display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
+
+/* ─── Alerts (messages on the page) ─── */
+.ts-alert { display: flex; align-items: flex-start; gap: 10px; padding: 11px 14px; border-radius: var(--r-md); border-width: 1px; border-style: solid; font-size: var(--fs-md); line-height: 1.5; }
+.ts-alert-compact { padding: 8px 12px; font-size: var(--fs-sm); }
+.ts-alert-icon  { flex-shrink: 0; margin-top: 1px; }
+.ts-alert-body  { flex: 1; min-width: 0; }
+.ts-alert-title { font-weight: 700; margin-bottom: 2px; }
+.ts-alert-action{ flex-shrink: 0; align-self: center; }
+.ts-alert-x     { background: none; border: none; cursor: pointer; color: inherit; opacity: 0.7; padding: 2px; display: inline-flex; border-radius: 6px; }
+.ts-alert-x:hover { opacity: 1; }
+.ts-alert-info    { background: var(--info-bg);    border-color: var(--info-border);    color: var(--info-text); }
+.ts-alert-success { background: var(--success-bg); border-color: var(--success-border); color: var(--success-text); }
+.ts-alert-warning { background: var(--warning-bg); border-color: var(--warning-border); color: var(--warning-text); }
+.ts-alert-danger  { background: var(--danger-bg);  border-color: var(--danger-border);  color: var(--danger-text); }
+.ts-alert a { color: inherit; font-weight: 600; }
+/* Block-level message (mixed text and links inside): same colours as .ts-alert-* */
+.ts-note { padding: 10px 14px; border-radius: var(--r-md); border-width: 1px; border-style: solid; font-size: var(--fs-md); line-height: 1.5; }
+.ts-note-compact { padding: 8px 12px; font-size: var(--fs-sm); }
+.ts-note a { color: inherit; font-weight: 600; }
+
+/* ─── Empty states ─── */
+.ts-empty { text-align: center; padding: 44px 24px; color: var(--text-muted); }
+.ts-empty-sm { padding: 28px 16px; }
+.ts-empty-bordered { border: 1.5px dashed var(--border); border-radius: var(--r-lg); background: var(--surface-soft); }
+.ts-empty-icon  { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 50%; background: var(--brand-tint); color: var(--brand); margin-bottom: var(--sp-3); }
+.ts-empty-sm .ts-empty-icon { width: 40px; height: 40px; }
+.ts-empty-title { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--text); }
+.ts-empty-body  { font-size: var(--fs-md); line-height: 1.6; max-width: 340px; margin: 6px auto 0; }
+.ts-empty-action{ margin-top: var(--sp-4); display: flex; justify-content: center; gap: var(--sp-2); flex-wrap: wrap; }
+
+/* ─── Icons (lucide, via components/Icon.jsx) ─── */
+.ts-ico-label { display: inline-flex; align-items: center; gap: 6px; }
+.ts-ico-label > svg { flex-shrink: 0; }
+svg.lucide { display: inline-block; vertical-align: -0.18em; flex-shrink: 0; }   /* inline in text (Tailwind's base makes every svg a block) */
+.ts-ico-tile  { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--r-md); background: var(--brand-tint); color: var(--brand); flex-shrink: 0; }
+.ts-ico-tile-lg { width: 52px; height: 52px; border-radius: 50%; }
+
+/* ─── Loading line (lists and panels) ─── */
+.ts-loading { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 36px 16px; color: var(--text-muted); font-size: var(--fs-md); }
+.ts-loading::before { content: ''; width: 14px; height: 14px; border: 2px solid var(--brand-tint); border-top-color: var(--brand); border-radius: 50%; animation: ts-btn-spin 0.8s linear infinite; }
+
+/* ─── Fields ─── */
+.ts-field { display: flex; flex-direction: column; margin-bottom: var(--sp-3); }
+.ts-field-error { font-size: var(--fs-xs); color: var(--danger-text); margin-top: 4px; }
+.ts-hactions { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
 
 /* ─── KPI Cards ─── */
 .ts-kpi {
@@ -218,8 +264,8 @@ button[aria-busy="true"]::before {
   letter-spacing: -0.5px; line-height: 1;
 }
 .ts-kpi-delta  { font-size: 11px; margin-top: 4px; font-weight: 600; }
-.ts-delta-up   { color: var(--green); }
-.ts-delta-dn   { color: var(--red); }
+.ts-delta-up   { color: var(--success-text); }
+.ts-delta-dn   { color: var(--danger-text); }
 .ts-delta-nt   { color: var(--muted); }
 
 /* ─── Grids ─── */
@@ -362,7 +408,7 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible { outline: 
 .ts-step.cur  .ts-step-n { background: var(--purple); color: white; }
 .ts-step.todo .ts-step-n { background: #E8E6F8; color: var(--muted); }
 .ts-step-lbl  { font-size: 12px; font-weight: 600; }
-.ts-step.done .ts-step-lbl { color: var(--green); }
+.ts-step.done .ts-step-lbl { color: var(--success-text); }
 .ts-step.cur  .ts-step-lbl { color: var(--dark); }
 .ts-step.todo .ts-step-lbl { color: #9CA3AF; }
 .ts-step-line { flex: 1; height: 1.5px; background: #E8E6F8; margin: 0 10px; min-width: 24px; }

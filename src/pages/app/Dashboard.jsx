@@ -5,6 +5,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useSubscription } from '../../hooks/useSubscription';
 import { supabase }         from '../../lib/supabase';
 import GettingStarted       from '../../components/GettingStarted';
+import { EmptyState } from '../../components/ui';
+import { Users, Activity } from 'lucide-react';
+import { Icon, IconLabel } from '../../components/Icon';
 
 function timeAgo(ts) {
   const s = Math.floor((Date.now() - new Date(ts)) / 1000);
@@ -98,7 +101,7 @@ export default function Dashboard() {
     <div className="ts-page">
       <div className="ts-hrow">
         <div>
-          <div className="ts-page-title">{greeting()}, {name} 👋</div>
+          <div className="ts-page-title">{greeting()}, {name}</div>
           <div className="ts-page-sub">
             {profile?.firm_name || 'Your firm'} · {new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}
           </div>
@@ -141,7 +144,7 @@ export default function Dashboard() {
 
       {/* Credit banner */}
       <div className="ts-hero-banner">
-        <span style={{fontSize:'22px'}}>🎬</span>
+        <Icon name="video" size={22} />
         <div style={{flex:1}}>
           <div style={{fontSize:'13px',fontWeight:700,color:'white',marginBottom:'5px'}}>
             Walkthrough credits — {credits} of {creditTotal} remaining
@@ -152,7 +155,7 @@ export default function Dashboard() {
         </div>
         {unread > 0 && (
           <Link to="/messages" style={{background:'rgba(255,255,255,0.12)',borderRadius:'8px',padding:'6px 12px',fontSize:'11px',fontWeight:700,color:'white',textDecoration:'none'}}>
-            💬 {unread} unread
+            <IconLabel icon="messages" size={13}>{unread} unread</IconLabel>
           </Link>
         )}
         <Link to="/billing" className="ts-btn ts-btn-secondary ts-btn-sm">Manage plan</Link>
@@ -163,12 +166,12 @@ export default function Dashboard() {
           {/* Tool cards — live counts */}
           <div className="ts-g3" style={{marginBottom:'12px'}}>
             {[
-              { to:'/cpa/projections', icon:'📊', label:'Tax Projections',  sub:'Completed returns', val: loading ? '—' : stats.cpaCount, unit:'returns' },
-              ...(FEATURES.planningModules ? [{ to:'/ria/projections', icon:'📈', label:'Investment Planning', sub:'Multi-year planning', val: loading ? '—' : stats.riaCount, unit:'clients' }] : []),
-              { to:'/cpa/video',       icon:'🎬', label:'Video Generator', sub:'Client walkthroughs', val: loading ? '—' : stats.videos, unit:'videos' },
+              { to:'/cpa/projections', icon:'projections', label:'Tax Projections',  sub:'Completed returns', val: loading ? '—' : stats.cpaCount, unit:'returns' },
+              ...(FEATURES.planningModules ? [{ to:'/ria/projections', icon:'planning', label:'Investment Planning', sub:'Multi-year planning', val: loading ? '—' : stats.riaCount, unit:'clients' }] : []),
+              { to:'/cpa/video',       icon:'video', label:'Video Generator', sub:'Client walkthroughs', val: loading ? '—' : stats.videos, unit:'videos' },
             ].map(c => (
               <Link key={c.to} to={c.to} className="ts-card" style={{cursor:'pointer',textDecoration:'none',display:'block'}}>
-                <div style={{width:'36px',height:'36px',borderRadius:'10px',background:'var(--purple3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'18px',marginBottom:'10px'}}>{c.icon}</div>
+                <div className="ts-ico-tile" style={{marginBottom:'10px'}}><Icon name={c.icon} size={18} /></div>
                 <div style={{fontSize:'12px',fontWeight:700,color:'var(--dark)'}}>{c.label}</div>
                 <div style={{fontSize:'11px',color:'var(--muted)',marginTop:'2px'}}>{c.sub}</div>
                 <div style={{fontFamily:'Playfair Display,serif',fontSize:'22px',fontWeight:700,color:'var(--dark)',marginTop:'8px'}}>
@@ -182,12 +185,10 @@ export default function Dashboard() {
           <div className="ts-card">
             <div className="ts-card-title">Recent clients <span className="ts-card-sub"><Link to="/clients" style={{color:'var(--purple)',textDecoration:'none',fontWeight:600}}>View all →</Link></span></div>
             {loading ? (
-              <div style={{padding:'20px 0',textAlign:'center',color:'var(--muted)',fontSize:'13px'}}>Loading…</div>
+              <div className="ts-loading" role="status">Loading…</div>
             ) : clients.length === 0 ? (
-              <div style={{padding:'20px 0',textAlign:'center'}}>
-                <div style={{fontSize:'13px',color:'var(--muted)',marginBottom:'10px'}}>No clients yet.</div>
-                <Link to="/clients" className="ts-btn ts-btn-ghost ts-btn-sm">+ Add first client</Link>
-              </div>
+              <EmptyState icon={Users} size="sm" title="No clients yet"
+                action={<Link to="/clients" className="ts-btn ts-btn-ghost ts-btn-sm">Add first client</Link>} />
             ) : clients.map((c, i) => (
               <div key={c.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'9px 0',borderBottom:i<clients.length-1?'1px solid var(--color-purple-faint)':'none'}}>
                 <div style={{display:'flex',alignItems:'center',gap:'9px'}}>
@@ -209,14 +210,14 @@ export default function Dashboard() {
             <div className="ts-card-title">Quick actions</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
               {[
-                {to:'/cpa/projections', icon:'📊', label:'Tax projection',   sub:'New analysis'},
-                ...(FEATURES.planningModules ? [{to:'/ria/projections', icon:'📈', label:'Investment projection',    sub:'Multi-year scenario'}] : []),
-                {to:'/cpa/video',       icon:'🎬', label:'Generate walkthrough',   sub:`${credits} credits left`},
-                {to:'/clients',         icon:'👤', label:'Add client',       sub:'New client record'},
+                {to:'/cpa/projections', icon:'projections', label:'Tax projection',   sub:'New analysis'},
+                ...(FEATURES.planningModules ? [{to:'/ria/projections', icon:'planning', label:'Investment projection',    sub:'Multi-year scenario'}] : []),
+                {to:'/cpa/video',       icon:'video', label:'Generate walkthrough',   sub:`${credits} credits left`},
+                {to:'/clients',         icon:'client', label:'Add client',       sub:'New client record'},
               ].map(a => (
                 <Link key={a.to} to={a.to} style={{background:'var(--purple3)',borderRadius:'10px',padding:'10px 12px',cursor:'pointer',textDecoration:'none',display:'block'}}>
-                  <div style={{fontSize:'12px',fontWeight:700,color:'var(--dark)'}}>{a.icon} {a.label}</div>
-                  <div style={{fontSize:'10px',color:'var(--muted)',marginTop:'2px'}}>{a.sub}</div>
+                  <div style={{fontSize:'12px',fontWeight:700,color:'var(--dark)'}}><IconLabel icon={a.icon} size={14}>{a.label}</IconLabel></div>
+                  <div style={{fontSize:'11px',color:'var(--muted)',marginTop:'2px'}}>{a.sub}</div>
                 </Link>
               ))}
             </div>
@@ -226,9 +227,9 @@ export default function Dashboard() {
           <div className="ts-card" style={{flex:1}}>
             <div className="ts-card-title">Recent activity</div>
             {loading ? (
-              <div style={{padding:'20px 0',textAlign:'center',color:'var(--muted)',fontSize:'13px'}}>Loading…</div>
+              <div className="ts-loading" role="status">Loading…</div>
             ) : activity.length === 0 ? (
-              <div style={{padding:'20px 0',textAlign:'center',color:'var(--muted)',fontSize:'13px'}}>No activity yet. Generate your first walkthrough to see credit usage and events here.</div>
+              <EmptyState icon={Activity} size="sm" title="No activity yet" body="Credit use and client views show up here after your first walkthrough." />
             ) : activity.map((a, i) => (
               <div className="ts-af" key={a.id||i}>
                 <div className="ts-af-dot" style={{background:activityColor(a.action)}} />
@@ -245,12 +246,12 @@ export default function Dashboard() {
       {/* Bottom: empty state or projections prompt */}
       {!loading && stats.projections === 0 && (
         <div className="ts-card" style={{textAlign:'center',padding:'40px 20px',marginTop:'16px'}}>
-          <div style={{fontSize:'40px',marginBottom:'12px'}}>🚀</div>
+          <div className="ts-ico-tile ts-ico-tile-lg" style={{marginBottom:'12px'}}><Icon name="launch" size={24} /></div>
           <div style={{fontFamily:'Playfair Display,serif',fontSize:'18px',fontWeight:700,color:'var(--dark)',marginBottom:'8px'}}>Ready to run your first projection?</div>
           <div style={{fontSize:'13px',color:'var(--muted)',maxWidth:'360px',margin:'0 auto 20px'}}>Import a completed tax return PDF (it is read on your device and never uploaded) and TaxStory will generate a personalized client walkthrough in 90 seconds.</div>
           <div style={{display:'flex',gap:'10px',justifyContent:'center'}}>
-            <Link to="/cpa/projections" className="ts-btn ts-btn-primary">📊 Tax Projection</Link>
-            {FEATURES.planningModules && <Link to="/ria/projections" className="ts-btn ts-btn-ghost">📈 Investment Planning</Link>}
+            <Link to="/cpa/projections" className="ts-btn ts-btn-primary"><Icon name="projections" /> Tax Projection</Link>
+            {FEATURES.planningModules && <Link to="/ria/projections" className="ts-btn ts-btn-ghost"><Icon name="planning" /> Investment Planning</Link>}
           </div>
         </div>
       )}

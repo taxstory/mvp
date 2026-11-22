@@ -10,6 +10,7 @@ import { normalizeWebsite, logoUploadInfo } from '../../utils/inputs';
 import { supabase }   from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { clearAllDrafts } from '../../utils/drafts';
+import { Icon, IconLabel } from '../../components/Icon';
 
 // Literal hex: the colour is stored and used in client emails and the rendered video, where CSS variables do not exist.
 // (Stored as 'var(--…)', every firm's choice was rejected by the server's colour check and replaced with TaxStory violet.)
@@ -124,10 +125,9 @@ export default function SettingsPage() {
 
   // ── Shared style tokens ────────────────────────────────────────
   const s = {
-    card:    { background:'#fff', border:'1px solid var(--color-border)', borderRadius:13, padding:'20px 22px', marginBottom:14 },
-    label:   { display:'block', fontSize:12, fontWeight:600, color:'var(--dark)', marginBottom:5 },
+    // Look comes from the shared classes (.ts-card, .ts-fl, global field style); these only add spacing.
+    card:    { marginBottom:14 },
     sub:     { fontWeight:400, color:'var(--muted)', marginLeft:6 },
-    input:   { width:'100%', padding:'9px 12px', border:'1px solid var(--color-border)', borderRadius:9, fontSize:13, fontFamily:'inherit', color:'var(--dark)', outline:'none' },
     ct:      { fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:14 },
     toggle:  (on) => ({
       display:'flex', alignItems:'center', gap:10, padding:'10px 12px',
@@ -137,7 +137,7 @@ export default function SettingsPage() {
     }),
   };
 
-  if (loading) return <div style={{ padding:32, color:'var(--muted)' }}>Loading…</div>;
+  if (loading) return <div className="ts-loading" role="status">Loading…</div>;
 
   return (
     <div className="ts-page" style={{ maxWidth:680 }}>
@@ -150,18 +150,18 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {error  && <div style={{ background:'var(--color-red-light)', color:'var(--color-red-dark)', padding:'10px 14px', borderRadius:10, fontSize:13, marginBottom:14 }}>{error}</div>}
-      {saved  && <div style={{ background:'var(--color-green-light)', color:'var(--color-green-dark)', padding:'10px 14px', borderRadius:10, fontSize:13, marginBottom:14 }}>✓ Settings saved</div>}
+      {error  && <div className="ts-note ts-alert-danger" role="alert" style={{ marginBottom:14 }}>{error}</div>}
+      {saved  && <div className="ts-note ts-alert-success" role="status" style={{ marginBottom:14 }}>✓ Settings saved</div>}
 
       <PrivacyModeCard />
 
       {/* Firm identity */}
-      <div style={s.card}>
+      <div className="ts-card" style={s.card}>
         <div style={s.ct}>Firm identity</div>
 
         <div style={{ marginBottom:14 }}>
-          <label style={s.label}>Firm name</label>
-          <input style={s.input} value={firmName} onChange={e => setFirmName(e.target.value)}
+          <label className="ts-fl">Firm name</label>
+          <input value={firmName} onChange={e => setFirmName(e.target.value)}
             placeholder="e.g. Lakeside Advisory Group" />
           <div style={{ fontSize:11, color:'var(--color-muted-light)', marginTop:4 }}>
             Appears in video headers, client emails, and PDF footers
@@ -170,23 +170,23 @@ export default function SettingsPage() {
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14 }}>
           <div>
-            <label style={s.label}>Phone <span style={{ fontWeight:400, color:'var(--color-muted-light)' }}>optional</span></label>
-            <input style={s.input} value={phone} onChange={e => setPhone(e.target.value)} placeholder="(555) 555-5555" />
+            <label className="ts-fl">Phone <span style={{ fontWeight:400, color:'var(--color-muted-light)' }}>optional</span></label>
+            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(555) 555-5555" />
           </div>
           <div>
-            <label style={s.label}>Website <span style={{ fontWeight:400, color:'var(--color-muted-light)' }}>optional</span></label>
-            <input style={s.input} value={website} onChange={e => setWebsite(e.target.value)} placeholder="yourfirm.com" />
+            <label className="ts-fl">Website <span style={{ fontWeight:400, color:'var(--color-muted-light)' }}>optional</span></label>
+            <input value={website} onChange={e => setWebsite(e.target.value)} placeholder="yourfirm.com" />
           </div>
         </div>
       </div>
 
       {/* Branding */}
-      <div style={s.card}>
+      <div className="ts-card" style={s.card}>
         <div style={s.ct}>Branding</div>
 
         {/* Logo */}
         <div style={{ marginBottom:18 }}>
-          <label style={s.label}>Firm logo <span style={{ fontWeight:400, color:'var(--color-muted-light)' }}>PNG, SVG — max 2 MB</span></label>
+          <label className="ts-fl">Firm logo <span style={{ fontWeight:400, color:'var(--color-muted-light)' }}>PNG, SVG — max 2 MB</span></label>
           <div style={{ display:'flex', alignItems:'center', gap:14 }}>
             <div
               onClick={() => logoRef.current?.click()}
@@ -195,13 +195,13 @@ export default function SettingsPage() {
             >
               {logoPreview
                 ? <img src={logoPreview} alt="logo" style={{ width:'100%', height:'100%', objectFit:'contain' }} />
-                : <span style={{ fontSize:26 }}>🏢</span>
+                : <span style={{ fontSize:26 }}><Icon name="building" /> </span>
               }
             </div>
             <div>
               <button
+                className="ts-btn ts-btn-ghost ts-btn-sm"
                 onClick={() => logoRef.current?.click()}
-                style={{ padding:'7px 14px', background:'var(--purple3)', color:'var(--purple)', border:'none', borderRadius:9, fontSize:12.5, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}
               >
                 {logoPreview ? 'Change logo' : 'Upload logo'}
               </button>
@@ -215,7 +215,7 @@ export default function SettingsPage() {
                     }
                     setLogoPreview(''); setLogoUrl('');
                   }}
-                  style={{ marginLeft:8, padding:'7px 14px', background:'var(--color-red-light)', color:'var(--color-red-dark)', border:'none', borderRadius:9, fontSize:12.5, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}
+                  className="ts-btn ts-btn-danger ts-btn-sm" style={{ marginLeft:8 }}
                 >
                   Remove
                 </button>
@@ -228,7 +228,7 @@ export default function SettingsPage() {
 
         {/* Brand color */}
         <div>
-          <label style={s.label}>Brand color</label>
+          <label className="ts-fl">Brand color</label>
           <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', marginBottom:12 }}>
             {BRAND_COLORS.map(c => (
               <div
@@ -251,7 +251,7 @@ export default function SettingsPage() {
             <div style={{ background:brandColor, padding:'16px 20px', display:'flex', alignItems:'center', gap:12 }}>
               {logoPreview
                 ? <img src={logoPreview} alt="logo" style={{ height:32, maxWidth:80, objectFit:'contain', borderRadius:6, flexShrink:0 }} />
-                : <div style={{ width:32, height:32, borderRadius:8, background:'rgba(255,255,255,.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>🏢</div>
+                : <div style={{ width:32, height:32, borderRadius:8, background:'rgba(255,255,255,.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}><Icon name="building" /> </div>
               }
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:15, fontWeight:700, color:'#fff', fontFamily:'Georgia,serif' }}>{firmName || 'Your Firm'}</div>
@@ -270,7 +270,7 @@ export default function SettingsPage() {
               display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, flexShrink:0, overflow:'hidden' }}>
               {logoPreview
                 ? <img src={logoPreview} style={{ width:'100%', height:'100%', objectFit:'contain', borderRadius:6 }} alt="" />
-                : '🏢'}
+                : ''}
             </div>
             <div>
               <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{firmName || 'Your Firm'}</div>
@@ -281,14 +281,14 @@ export default function SettingsPage() {
       </div>
 
       {/* Notification preferences */}
-      <div style={s.card}>
+      <div className="ts-card" style={s.card}>
         <div style={s.ct}>Email notifications</div>
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
 
           {[
-            [notifVideoComplete,  setNotifVideoComplete,  '🎬 Client watched their walkthrough',    'Receive an email the moment a client completes viewing'],
-            [notifCreditsLow,     setNotifCreditsLow,     '⚠️ Walkthrough credits running low',           'Alert when fewer than 10% of credits remain'],
-            [notifMessageReceived,setNotifMessageReceived,'💬 Client sent a message',               'Notify when a client replies through the portal'],
+            [notifVideoComplete,  setNotifVideoComplete,  'Client watched their walkthrough',    'Receive an email the moment a client completes viewing'],
+            [notifCreditsLow,     setNotifCreditsLow,     'Walkthrough credits running low',           'Alert when fewer than 10% of credits remain'],
+            [notifMessageReceived,setNotifMessageReceived,'Client sent a message',               'Notify when a client replies through the portal'],
           ].map(([on, setOn, title, desc]) => (
             <div key={title} style={s.toggle(on)} onClick={() => setOn(!on)}>
               <div style={{ flex:1 }}>
@@ -316,15 +316,13 @@ export default function SettingsPage() {
       <button
         onClick={save}
         disabled={saving} aria-busy={saving}
-        style={{ width:'100%', padding:'13px', background:'var(--purple)', color:'#fff', border:'none',
-          borderRadius:11, fontSize:14, fontWeight:700, cursor:saving?'not-allowed':'pointer',
-          fontFamily:'inherit', opacity:saving?0.7:1 }}
+        className="ts-btn ts-btn-primary ts-btn-block"
       >
         {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save settings'}
       </button>
 
       {/* Account info */}
-      <div style={{ ...s.card, marginTop:14 }}>
+      <div className="ts-card" style={{ ...s.card, marginTop:14 }}>
         <div style={s.ct}>Account</div>
         <div style={{ fontSize:13, color:'var(--muted)', marginBottom:6 }}>
           Email: <strong style={{ color:'var(--dark)' }}>{user?.email}</strong>
@@ -336,7 +334,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Delete account — permanent */}
-      <div style={{ ...s.card, marginTop:14, border:'1px solid var(--color-red-mid)' }}>
+      <div className="ts-card" style={{ ...s.card, marginTop:14, borderColor:'var(--danger-border)' }}>
         <div style={{ ...s.ct, color:'var(--color-red-dark)' }}>Delete account</div>
         {!delOpen ? (
           <>
@@ -344,8 +342,7 @@ export default function SettingsPage() {
               Permanently deletes your account, every client, projection, walkthrough, voiceover, video and share link, and cancels your subscription.
               This cannot be undone. Invoices already issued stay with our payment processor for accounting records.
             </div>
-            <button onClick={() => setDelOpen(true)}
-              style={{ padding:'9px 16px', background:'#fff', color:'var(--color-red-dark)', border:'1px solid var(--color-red-mid)', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+            <button onClick={() => setDelOpen(true)} className="ts-btn ts-btn-danger ts-btn-sm">
               Delete my account…
             </button>
           </>
@@ -359,12 +356,11 @@ export default function SettingsPage() {
             {delError && <div style={{ color:'var(--color-red-dark)', fontSize:12.5, marginBottom:10 }}>{delError}</div>}
             <div style={{ display:'flex', gap:8 }}>
               <button onClick={deleteAccount} disabled={delBusy || delText !== 'DELETE' || !delPw} aria-busy={delBusy}
-                style={{ padding:'9px 16px', background:'var(--color-red-mid)', color:'#fff', border:'none', borderRadius:9, fontSize:13, fontWeight:700, fontFamily:'inherit',
-                  cursor: delBusy || delText !== 'DELETE' || !delPw ? 'not-allowed' : 'pointer', opacity: delBusy || delText !== 'DELETE' || !delPw ? .6 : 1 }}>
+                className="ts-btn ts-btn-destructive ts-btn-sm">
                 {delBusy ? 'Deleting…' : 'Permanently delete'}
               </button>
               <button onClick={() => { setDelOpen(false); setDelText(''); setDelPw(''); setDelError(''); }} disabled={delBusy}
-                style={{ padding:'9px 16px', background:'transparent', color:'var(--muted)', border:'1px solid var(--color-border)', borderRadius:9, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                className="ts-btn ts-btn-secondary ts-btn-sm">
                 Cancel
               </button>
             </div>

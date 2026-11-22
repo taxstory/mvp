@@ -9,11 +9,12 @@ import { useNavigate } from 'react-router-dom';
 import { readReturnPdf } from '../../utils/pdfExtract';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { Icon, IconLabel } from '../../components/Icon';
 
 const STEPS = [
-  { id: 1, label: 'Your practice',  icon: '🏢' },
-  { id: 2, label: 'First client',   icon: '📄' },
-  { id: 3, label: 'Your branding',  icon: '🎨' },
+  { id: 1, label: 'Your practice',  icon: 'building' },
+  { id: 2, label: 'First client',   icon: 'file' },
+  { id: 3, label: 'Your branding',  icon: 'palette' },
 ];
 
 const COLORS = ['#6B5CE7','#2563EB','#059669','#DC2626','#D97706','#7C3AED','#0891B2','#1A1230'];   // hex: stored and used in emails and video, where CSS variables do not work
@@ -170,11 +171,6 @@ export default function OnboardingWizard() {
     card:    { width:'100%', maxWidth:560, background:'#fff', borderRadius:20, border:'1px solid var(--color-border)', boxShadow:'0 8px 40px rgba(107,92,231,.08)', overflow:'hidden' },
     header:  { background:'var(--color-dark)', padding:'28px 32px 24px' },
     body:    { padding:'32px' },
-    label:   { display:'block', fontSize:12, fontWeight:600, color:'var(--color-muted)', marginBottom:6 },
-    input:   { width:'100%', padding:'10px 14px', border:'1px solid var(--color-border)', borderRadius:10, fontSize:14, fontFamily:'inherit', outline:'none', color:'var(--color-dark)' },
-    btnPri:  { width:'100%', padding:'13px', background:'var(--color-purple)', color:'#fff', border:'none', borderRadius:11, fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' },
-    btnSec:  { width:'100%', padding:'13px', background:'var(--color-purple-3)', color:'var(--color-purple)', border:'none', borderRadius:11, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit' },
-    err:     { background:'var(--color-red-light)', color:'var(--color-red-dark)', padding:'10px 14px', borderRadius:10, fontSize:13, marginBottom:16 },
     pill:    (active) => ({ padding:'10px 18px', borderRadius:10, border:`2px solid ${active?'var(--color-purple)':'var(--color-border)'}`, background:active?'var(--color-purple-3)':'#fff', cursor:'pointer', fontSize:13, fontWeight:600, color:active?'var(--color-purple)':'var(--color-muted)', transition:'all .12s', fontFamily:'inherit' }),
   };
 
@@ -209,21 +205,21 @@ export default function OnboardingWizard() {
 
         {/* Body */}
         <div style={s.body}>
-          {error && <div style={s.err}>{error}</div>}
+          {error && <div className="ts-alert ts-alert-danger" role="alert" style={{ marginBottom:16 }}>{error}</div>}
 
           {/* ── STEP 1: Identity ──────────────────────────── */}
           {step === 1 && (
             <>
-              <div style={{ fontFamily:'Georgia,serif', fontSize:22, fontWeight:700, color:'var(--color-dark)', marginBottom:6 }}>Welcome to TaxStory 👋</div>
+              <div style={{ fontFamily:'Georgia,serif', fontSize:22, fontWeight:700, color:'var(--color-dark)', marginBottom:6 }}>Welcome to TaxStory </div>
               <div style={{ fontSize:14, color:'var(--color-muted)', marginBottom:28, lineHeight:1.6 }}>Let's get your practice set up. This takes about 3 minutes.</div>
 
               <div style={{ marginBottom:16 }}>
-                <label style={s.label}>Firm or practice name</label>
-                <input style={s.input} placeholder="e.g. Chen & Associates" value={firmName} onChange={e => setFirmName(e.target.value)} autoFocus />
+                <label className="ts-fl">Firm or practice name</label>
+                <input placeholder="e.g. Chen & Associates" value={firmName} onChange={e => setFirmName(e.target.value)} autoFocus />
               </div>
 
               <div style={{ marginBottom:20 }}>
-                <label style={s.label}>Practice type</label>
+                <label className="ts-fl">Practice type</label>
                 <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:4 }}>
                   {[['solo','Solo practitioner'],['small_firm','Small firm (2–10)'],['large_firm','Larger firm (10+)']].map(([v,l]) => (
                     <button key={v} style={s.pill(practiceType===v)} onClick={() => setPracticeType(v)}>{l}</button>
@@ -232,7 +228,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ marginBottom:28 }}>
-                <label style={s.label}>Primary use</label>
+                <label className="ts-fl">Primary use</label>
                 <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:4 }}>
                   {[['tax','Tax projections'],['investment','Investment planning'],['both','Both']].map(([v,l]) => (
                     <button key={v} style={s.pill(primaryUse===v)} onClick={() => setPrimaryUse(v)}>{l}</button>
@@ -240,7 +236,7 @@ export default function OnboardingWizard() {
                 </div>
               </div>
 
-              <button style={s.btnPri} onClick={nextStep1} disabled={saving} aria-busy={saving}>
+              <button className="ts-btn ts-btn-primary ts-btn-block" onClick={nextStep1} disabled={saving} aria-busy={saving}>
                 {saving ? 'Saving…' : 'Continue →'}
               </button>
             </>
@@ -257,7 +253,7 @@ export default function OnboardingWizard() {
                 onClick={() => fileRef.current?.click()}
                 style={{ border:`2px dashed ${file?'var(--color-purple)':'var(--color-border)'}`, borderRadius:12, padding:'24px 20px', textAlign:'center', cursor:'pointer', background:file?'var(--color-purple-3)':'var(--color-soft-white)', marginBottom:12, transition:'all .15s' }}
               >
-                <div style={{ fontSize:28, marginBottom:8 }}>☁️</div>
+                <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom: 8 }}><Icon name="upload" size={24} /></div>
                 <div style={{ fontSize:14, fontWeight:600, color:file?'var(--color-purple)':'var(--color-dark)' }}>{file ? file.name : 'Drop a PDF or click to browse'}</div>
                 <div style={{ fontSize:12, color:'var(--color-muted)', marginTop:4 }}>Form 1040 · Max 25 MB · read on your device, never uploaded</div>
                 <input ref={fileRef} type="file" accept=".pdf" style={{ display:'none' }} onChange={handleFileChange} />
@@ -273,13 +269,13 @@ export default function OnboardingWizard() {
                 style={{ ...s.pill(useDemo), width:'100%', marginBottom:20, textAlign:'center' }}
                 onClick={() => { setUseDemo(true); setFile(null); setParseResult(null); }}
               >
-                📋 Use demo return — no PDF needed
+                <Icon name="clipboard" /> Use demo return — no PDF needed
               </button>
 
               {/* Parse button */}
               {!parseResult && (
                 <button
-                  style={{ ...s.btnPri, marginBottom:12, opacity: parsing ? .7 : 1 }}
+                  className="ts-btn ts-btn-primary ts-btn-block" style={{ marginBottom:12 }}
                   onClick={handleParse}
                   disabled={parsing || (!file && !useDemo)} aria-busy={parsing}
                 >
@@ -291,7 +287,7 @@ export default function OnboardingWizard() {
               {parseResult && (
                 <div style={{ background:'var(--color-purple-4)', border:'1px solid var(--color-blue-mid-bg)', borderRadius:12, padding:16, marginBottom:20 }}>
                   <div style={{ fontSize:11, fontWeight:700, color:'var(--color-purple)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:10 }}>
-                    {parseResult.demo ? '📋 Demo return' : '✅ Return parsed'} · {parseResult.taxYear} · {parseResult.filingStatus}
+                    {parseResult.demo ? 'Demo return' : 'Return parsed'} · {parseResult.taxYear} · {parseResult.filingStatus}
                   </div>
                   {[
                     ['Wages / gross income', `$${parseResult.wages?.toLocaleString()}`],
@@ -313,8 +309,8 @@ export default function OnboardingWizard() {
               )}
 
               <div style={{ display:'flex', gap:8 }}>
-                <button style={{ ...s.btnSec, flex:1 }} onClick={() => setStep(1)}>← Back</button>
-                <button style={{ ...s.btnPri, flex:2 }} onClick={nextStep2} disabled={saving || !parseResult} aria-busy={saving}>
+                <button className="ts-btn ts-btn-ghost ts-btn-block" style={{ flex:1 }} onClick={() => setStep(1)}>← Back</button>
+                <button className="ts-btn ts-btn-primary ts-btn-block" style={{ flex:2 }} onClick={nextStep2} disabled={saving || !parseResult} aria-busy={saving}>
                   {saving ? 'Saving…' : 'Continue →'}
                 </button>
               </div>
@@ -329,7 +325,7 @@ export default function OnboardingWizard() {
 
               {/* Logo upload */}
               <div style={{ marginBottom:20 }}>
-                <label style={s.label}>Firm logo <span style={{ fontWeight:400, color:'var(--color-muted-light)' }}>optional · PNG or SVG recommended</span></label>
+                <label className="ts-fl">Firm logo <span style={{ fontWeight:400, color:'var(--color-muted-light)' }}>optional · PNG or SVG recommended</span></label>
                 <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                   <div
                     onClick={() => logoRef.current?.click()}
@@ -337,7 +333,7 @@ export default function OnboardingWizard() {
                   >
                     {logoPreview
                       ? <img src={logoPreview} alt="logo" style={{ width:'100%', height:'100%', objectFit:'contain' }} />
-                      : <span style={{ fontSize:24 }}>🏢</span>
+                      : <span style={{ fontSize:24 }}><Icon name="building" /> </span>
                     }
                   </div>
                   <div>
@@ -352,7 +348,7 @@ export default function OnboardingWizard() {
 
               {/* Brand color */}
               <div style={{ marginBottom:28 }}>
-                <label style={s.label}>Brand color</label>
+                <label className="ts-fl">Brand color</label>
                 <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:4 }}>
                   {COLORS.map(c => (
                     <div
@@ -371,7 +367,7 @@ export default function OnboardingWizard() {
               {/* Preview */}
               <div style={{ background:'var(--color-dark)', borderRadius:12, padding:16, marginBottom:24, display:'flex', alignItems:'center', gap:12 }}>
                 <div style={{ width:40, height:40, borderRadius:8, background:brandColor, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>
-                  {logoPreview ? <img src={logoPreview} style={{ width:'100%', height:'100%', objectFit:'contain', borderRadius:6 }} alt="" /> : '🏢'}
+                  {logoPreview ? <img src={logoPreview} style={{ width:'100%', height:'100%', objectFit:'contain', borderRadius:6 }} alt="" /> : ''}
                 </div>
                 <div>
                   <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>{firmName || 'Your Firm'}</div>
@@ -380,9 +376,9 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display:'flex', gap:8 }}>
-                <button style={{ ...s.btnSec, flex:1 }} onClick={() => setStep(2)}>← Back</button>
-                <button style={{ ...s.btnPri, flex:2 }} onClick={finish} disabled={saving} aria-busy={saving}>
-                  {saving ? 'Setting up your account…' : '🚀 Launch TaxStory'}
+                <button className="ts-btn ts-btn-ghost ts-btn-block" style={{ flex:1 }} onClick={() => setStep(2)}>← Back</button>
+                <button className="ts-btn ts-btn-primary ts-btn-block" style={{ flex:2 }} onClick={finish} disabled={saving} aria-busy={saving}>
+                  {saving ? 'Setting up your account…' : 'Launch TaxStory'}
                 </button>
               </div>
 

@@ -1,150 +1,67 @@
 // src/components/ui/Button.jsx
 //
-// Props:
-//   variant   'primary' | 'secondary' | 'ghost' | 'danger'  (default: 'primary')
-//   size      'sm' | 'md' | 'lg'                             (default: 'md')
-//   loading   boolean — shows spinner, disables interaction
-//   disabled  boolean
-//   icon      ReactNode — rendered before children
-//   iconRight ReactNode — rendered after children
-//   fullWidth boolean
-//   as        'button' | 'a'                                 (default: 'button')
-//   ...rest   passed through (onClick, href, type, aria-*, data-*)
+// The app's button. It renders the .ts-btn classes in index.css, so it looks exactly like every other button
+// in the product — the classes are the single definition of the look; this is only the convenient way to use them.
 //
-// Accessibility:
-//   - aria-disabled on loading/disabled (not just HTML disabled, so focus is kept
-//     and screen readers announce the state rather than skipping the element)
-//   - aria-busy on loading
-//   - role="button" when rendered as <a>
-//   - All keyboard interactions work natively (button element)
+// Props:
+//   variant   'primary' | 'secondary' | 'ghost' | 'danger'   (default 'primary')
+//   size      'sm' | 'md'                                     (default 'md'; 'lg' is accepted and treated as 'md')
+//   loading   boolean — spinner + busy state; the button is disabled while loading
+//   disabled  boolean — looks disabled (.ts-btn:disabled)
+//   icon      a lucide-react component (e.g. Plus) or a node — shown before the label
+//   iconRight a lucide-react component or node — shown after the label
+//   fullWidth boolean
+//   as        'button' | 'a' | a router Link component        (default 'button')
+//   ...rest   onClick, href, to, type, aria-*, data-*
 //
 // Usage:
-//   <Button onClick={save}>Save</Button>
+//   import { Plus } from 'lucide-react';
+//   <Button icon={Plus} onClick={add}>Add client</Button>
 //   <Button variant="secondary" size="sm" onClick={cancel}>Cancel</Button>
 //   <Button loading={saving}>Save changes</Button>
-//   <Button variant="danger" icon="🗑" size="sm">Delete</Button>
-//   <Button as="a" href="/billing">View billing</Button>
 
-import { forwardRef } from 'react';
+import { forwardRef, isValidElement, createElement } from 'react';
 
-const VARIANTS = {
-  primary:   { bg: 'var(--color-purple)',    color: '#fff',                   border: 'transparent',           hoverBg: 'var(--color-purple-2)' },
-  secondary: { bg: 'transparent',           color: 'var(--color-purple)',    border: 'var(--color-border)',   hoverBg: 'var(--color-bg)'       },
-  ghost:     { bg: 'transparent',           color: 'var(--color-muted)',     border: 'transparent',           hoverBg: 'var(--color-bg)'       },
-  danger:    { bg: 'var(--color-red-light)', color: 'var(--color-red-dark)', border: 'var(--color-red-border)', hoverBg: 'var(--color-red-bg)'  },
-};
+const ICON_SIZE = { sm: 14, md: 16 };
 
-const SIZES = {
-  sm: { padding: '5px 12px',  fontSize: '12px', height: '30px', gap: '5px',  radius: 'var(--radius-sm)', iconSize: '13px' },
-  md: { padding: '9px 18px',  fontSize: '13px', height: '38px', gap: '7px',  radius: 'var(--radius-md)', iconSize: '15px' },
-  lg: { padding: '12px 24px', fontSize: '14px', height: '46px', gap: '8px',  radius: 'var(--radius-lg)', iconSize: '16px' },
-};
+function renderIcon(icon, size) {
+  if (!icon) return null;
+  if (isValidElement(icon)) return icon;
+  if (typeof icon === 'string') return <span aria-hidden="true">{icon}</span>;
+  return createElement(icon, { size, 'aria-hidden': true, strokeWidth: 2 });   // a lucide component
+}
 
-const SPINNER_STYLE = (size) => ({
-  width:  size === 'sm' ? '11px' : size === 'lg' ? '16px' : '13px',
-  height: size === 'sm' ? '11px' : size === 'lg' ? '16px' : '13px',
-  border: '2px solid currentColor',
-  borderTopColor: 'transparent',
-  borderRadius: '50%',
-  animation: 'ts-spin 0.7s linear infinite',
-  flexShrink: 0,
-});
-
-export const Button = forwardRef(function Button(
-  {
-    children,
-    variant   = 'primary',
-    size      = 'md',
-    loading   = false,
-    disabled  = false,
-    icon      = null,
-    iconRight = null,
-    fullWidth = false,
-    as        = 'button',
-    style     = {},
-    className = '',
-    ...rest
-  },
-  ref
-) {
-  const v    = VARIANTS[variant] || VARIANTS.primary;
-  const s    = SIZES[size]       || SIZES.md;
-  const isBusy = loading || disabled;
-
-  const baseStyle = {
-    display:        'inline-flex',
-    alignItems:     'center',
-    justifyContent: 'center',
-    gap:            s.gap,
-    padding:        s.padding,
-    height:         s.height,
-    fontSize:       s.fontSize,
-    fontWeight:     600,
-    fontFamily:     'inherit',
-    letterSpacing:  '0.01em',
-    borderRadius:   s.radius,
-    border:         `1.5px solid ${v.border}`,
-    background:     v.bg,
-    color:          v.color,
-    cursor:         isBusy ? 'not-allowed' : 'pointer',
-    opacity:        isBusy ? 0.65 : 1,
-    transition:     'background .15s, opacity .15s, transform .1s',
-    textDecoration: 'none',
-    whiteSpace:     'nowrap',
-    userSelect:     'none',
-    width:          fullWidth ? '100%' : undefined,
-    boxSizing:      'border-box',
-    ...style,
-  };
-
-  const props = {
-    ref,
-    className: `ts-btn ts-btn-${variant} ts-btn-${size}${className ? ` ${className}` : ''}`,
-    style: baseStyle,
-    'aria-disabled': isBusy ? 'true' : undefined,
-    'aria-busy':     loading  ? 'true' : undefined,
-    disabled:        isBusy,
-    tabIndex:        isBusy ? -1 : undefined,
-    // Hover state via CSS since inline styles can't do :hover
-    onMouseEnter: (e) => {
-      if (!isBusy) e.currentTarget.style.background = v.hoverBg;
-      rest.onMouseEnter?.(e);
-    },
-    onMouseLeave: (e) => {
-      if (!isBusy) e.currentTarget.style.background = v.bg;
-      rest.onMouseLeave?.(e);
-    },
-    onMouseDown: (e) => {
-      if (!isBusy) e.currentTarget.style.transform = 'scale(0.97)';
-      rest.onMouseDown?.(e);
-    },
-    onMouseUp: (e) => {
-      e.currentTarget.style.transform = '';
-      rest.onMouseUp?.(e);
-    },
-    ...rest,
-    // Override onClick to block when disabled/loading
-    onClick: isBusy ? (e) => e.preventDefault() : rest.onClick,
-  };
-
-  if (as === 'a') props.role = 'button';
-
-  const Tag = as;
+export const Button = forwardRef(function Button({
+  children,
+  variant   = 'primary',
+  size      = 'md',
+  loading   = false,
+  disabled  = false,
+  icon,
+  iconRight,
+  fullWidth = false,
+  as: Tag   = 'button',
+  type,
+  className = '',
+  ...rest
+}, ref) {
+  const sz = size === 'sm' ? 'sm' : 'md';
+  const cls = ['ts-btn', `ts-btn-${variant}`, sz === 'sm' && 'ts-btn-sm', fullWidth && 'ts-btn-block', className].filter(Boolean).join(' ');
+  const isButton = Tag === 'button';
+  const inactive = disabled || loading;
 
   return (
-    <Tag {...props}>
-      {loading && <span style={SPINNER_STYLE(size)} aria-hidden="true" />}
-      {!loading && icon && <span style={{ fontSize: s.iconSize, lineHeight: 1 }} aria-hidden="true">{icon}</span>}
+    <Tag
+      ref={ref}
+      className={cls}
+      {...(isButton ? { type: type || 'button', disabled: inactive } : { 'aria-disabled': inactive || undefined, role: Tag === 'a' ? 'button' : undefined })}
+      aria-busy={loading || undefined}
+      {...rest}
+      onClick={inactive && !isButton ? (e) => e.preventDefault() : rest.onClick}
+    >
+      {!loading && renderIcon(icon, ICON_SIZE[sz])}
       {children}
-      {iconRight && !loading && <span style={{ fontSize: s.iconSize, lineHeight: 1 }} aria-hidden="true">{iconRight}</span>}
+      {renderIcon(iconRight, ICON_SIZE[sz])}
     </Tag>
   );
 });
-
-// Inject keyframes once
-if (typeof document !== 'undefined' && !document.getElementById('ts-spin-kf')) {
-  const style = document.createElement('style');
-  style.id = 'ts-spin-kf';
-  style.textContent = '@keyframes ts-spin { to { transform: rotate(360deg); } }';
-  document.head.appendChild(style);
-}

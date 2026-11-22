@@ -2,15 +2,7 @@
    Pre-launch layer, imported by App.jsx after tokens.css.
    :root:root (specificity 0,2,0) wins regardless of stylesheet order. */
 
-:root:root {
-  /* Referenced in JSX but never defined in index.css */
-  --green-dark: #065F46;
-  --green-bg:   #D1FAE5;
-  --amber-bg:   #FEF3C7;
-  /* Was #A0A0C0 (~2.5:1 on white). #727290 is ~4.65:1, passes WCAG AA. */
-  --muted-light:       #727290;
-  --color-muted-light: #727290;
-}
+/* (Token overrides that used to sit here now live in tokens.css.) */
 
 /* ── Accessibility ─────────────────────────────────────────── */
 .ts-skip-link {

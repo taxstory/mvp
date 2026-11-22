@@ -8,9 +8,14 @@ import { safeMailtoAddress } from '../../utils/safeRedirect';
 import { useAuth }   from '../../context/AuthContext';
 import { supabase }  from '../../lib/supabase';
 import { identifierError } from '../../utils/pii';
+import { useToast } from '../../components/ui';
+import { EmptyState } from '../../components/ui';
+import { MessageSquare } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function MessagesPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [messages,  setMessages]  = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [selected,  setSelected]  = useState(null); // open message id
@@ -31,7 +36,7 @@ export default function MessagesPage() {
   async function sendReply(msg) {
     if (!replyBody.trim() || !user) return;
     const idErr = identifierError(replyBody, 'Your reply');
-    if (idErr) { window.alert(idErr); return; }
+    if (idErr) { toast(idErr, { variant: 'danger', duration: 6000 }); return; }
     setReplySending(true);
     try {
       // Store outbound message in DB
@@ -63,7 +68,7 @@ export default function MessagesPage() {
       setReplySent(true);
       setTimeout(() => setReplySent(false), 3000);
       await fetchMessages();
-    } catch (e) { console.error('sendReply:', e?.message); window.alert(`Could not send: ${e?.message || 'please try again'}`); }
+    } catch (e) { console.error('sendReply:', e?.message); toast(`Could not send: ${e?.message || 'please try again'}`, { variant: 'danger', duration: 6000 }); }
     setReplySending(false);
   }
 
@@ -120,23 +125,16 @@ export default function MessagesPage() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign:'center', padding:48, color:'var(--muted)' }}>Loading…</div>
+        <div className="ts-loading" role="status">Loading…</div>
       ) : messages.length === 0 ? (
-        <div style={{ textAlign:'center', padding:64 }}>
-          <div style={{ fontSize:40, marginBottom:12 }}>💬</div>
-          <div style={{ fontSize:14, color:'var(--muted)', marginBottom:8 }}>No messages yet.</div>
-          <div style={{ fontSize:12, color:'var(--muted-light)' }}>
-            When a client replies to their walkthrough, it will appear here.
-          </div>
-        </div>
+        <EmptyState icon={MessageSquare} title="No messages yet" body="When a client replies to a walkthrough you shared, the message appears here."
+          action={<Link to="/cpa/video" className="ts-btn ts-btn-secondary ts-btn-sm">Go to walkthroughs</Link>} />
       ) : (
         <div style={{ display:'flex', gap: isMobile ? 0 : 16, flexDirection:'column' }}>
           {/* Mobile back button */}
           {isMobile && mobileView === 'detail' && (
             <button onClick={() => setMobileView('list')}
-              style={{ alignSelf:'flex-start', background:'none', border:'none', color:'var(--purple)',
-                fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-                padding:'4px 0', marginBottom:10, display:'flex', alignItems:'center', gap:4 }}>
+              className="ts-link-btn" style={{ alignSelf:'flex-start', marginBottom:10 }}>
               ← All messages
             </button>
           )}
@@ -217,8 +215,7 @@ export default function MessagesPage() {
                         Reply to {msg.clients?.name || msg.sent_to || 'client'}
                       </div>
                       {replySent ? (
-                        <div style={{ padding:'12px 14px', background:'var(--green-bg)', borderRadius:10,
-                          fontSize:13, fontWeight:600, color:'var(--green-dark)' }}>
+                        <div className="ts-note ts-alert-success" role="status" style={{ fontWeight:600 }}>
                           ✓ Reply saved — {msg.clients?.email || msg.sent_to ? 'check your email client to send' : 'no client email on file'}
                         </div>
                       ) : (
@@ -236,10 +233,7 @@ export default function MessagesPage() {
                             <button
                               disabled={replySending || !replyBody.trim()}
                               onClick={() => sendReply(msg)}
-                              style={{ padding:'9px 18px', background:'var(--purple)', color:'#fff',
-                                border:'none', borderRadius:9, fontSize:13, fontWeight:600,
-                                cursor:'pointer', fontFamily:'inherit',
-                                opacity: replySending || !replyBody.trim() ? 0.6 : 1 }}>
+                              className="ts-btn ts-btn-primary ts-btn-sm">
                               {replySending ? 'Sending…' : 'Send reply'}
                             </button>
                             {!msg.clients?.email && (

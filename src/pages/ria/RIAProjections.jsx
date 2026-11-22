@@ -76,6 +76,7 @@ const EMPTY_FORM = {
 
 import { useConfirm } from '../../components/ui/ConfirmProvider';
 import ScopeNotice from '../../components/ui/ScopeNotice';
+import { Icon, IconLabel } from '../../components/Icon';
 
 export default function RIAProjections() {
   const confirm = useConfirm();
@@ -185,10 +186,10 @@ export default function RIAProjections() {
         ))}
       </div>
       <div className="ts-card">
-        {loading ? <div style={{padding:'40px',textAlign:'center',color:'var(--muted)'}}>Loading…</div>
+        {loading ? <div className="ts-loading" role="status">Loading…</div>
         : projections.length === 0 ? (
           <div style={{textAlign:'center',padding:'40px'}}>
-            <div style={{fontSize:'32px',marginBottom:'10px'}}>📈</div>
+            <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom: 10 }}><Icon name="planning" size={24} /></div>
             <div style={{fontSize:'14px',color:'var(--muted)',marginBottom:'16px'}}>No investment projections yet.</div>
             <button className="ts-btn ts-btn-primary" onClick={()=>setView('new')}>+ Build first projection</button>
           </div>
@@ -252,7 +253,7 @@ export default function RIAProjections() {
               <input type="range" min="3" max="12" step="0.5" value={form.growthRate} onChange={upd('growthRate')} />
             </div>
           </div>
-          {error && <div style={{background:'var(--color-red-light)',color:'var(--color-red-dark)',padding:'10px 14px',borderRadius:'10px',fontSize:'13px'}}>{error}</div>}
+          {error && <div className="ts-note ts-alert-danger" role="alert">{error}</div>}
           <div style={{display:'flex',gap:'10px'}}>
             <button className="ts-btn ts-btn-secondary" style={{flex:1}} onClick={()=>setView('list')}>Cancel</button>
             <button className="ts-btn ts-btn-primary" style={{flex:2}} onClick={handleSave} disabled={saving} aria-busy={saving}>{saving?'Saving…':'Build projection →'}</button>
@@ -400,7 +401,7 @@ export default function RIAProjections() {
               {sp.map((y,i)=>(
                 <tr key={i} style={{background:y.age===(s.retirement_age||65)?'var(--purple3)':''}}>
                   <td style={{fontWeight:y.age===(s.retirement_age||65)?700:400}}>{y.year}</td>
-                  <td>{y.age}{y.age===s.retirement_age?' 🎯':''}</td>
+                  <td>{y.age}{y.age===s.retirement_age?' ':''}</td>
                   <td>{fmt(y.income)}</td>
                   <td>{fmt(y.fedTax)}</td>
                   <td style={{fontWeight:600}}>{fmt(y.total)}</td>

@@ -5,9 +5,10 @@
 export { Button }                        from './Button';
 export { Card, CardTitle, CardBody, CardFooter } from './Card';
 export { Badge, Pill }                   from './Badge';
-export { Input, Field }                  from './Input';
+export { Input, Select, Textarea, Field } from './Input';
 export { Spinner, PageSpinner, Skeleton } from './Spinner';
 export { Alert }                         from './Alert';
+export { PageHeader }                    from './PageHeader';
 export { EmptyState }                    from './EmptyState';
 export { Modal }                         from './Modal';
 export { ConfirmProvider, useConfirm }   from './ConfirmProvider';

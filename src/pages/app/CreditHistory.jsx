@@ -5,12 +5,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth }  from '../../context/AuthContext';
+import { Icon } from '../../components/Icon';
 
 const LABELS = {
-  audio_generated:        { icon: '🎬', label: 'Walkthrough credit used'  },
-  credit_purchased:       { icon: '💳', label: 'Credits purchased'  },
-  subscription_activated: { icon: '✅', label: 'Subscription active'},
-  subscription_canceled:  { icon: '❌', label: 'Subscription ended' },
+  audio_generated:        { icon: 'video', label: 'Walkthrough credit used'  },
+  credit_purchased:       { icon: 'billing', label: 'Credits purchased'  },
+  subscription_activated: { icon: 'success', label: 'Subscription active'},
+  subscription_canceled:  { icon: 'error', label: 'Subscription ended' },
 };
 
 export default function CreditHistory() {
@@ -35,19 +36,19 @@ export default function CreditHistory() {
         Credit & billing history
       </div>
       {loading ? (
-        <div style={{ fontSize:13, color:'var(--color-muted)' }}>Loading…</div>
+        <div className="ts-loading" role="status">Loading…</div>
       ) : history.length === 0 ? (
         <div style={{ fontSize:13, color:'var(--color-muted)', padding:'8px 0' }}>
           No activity yet — credits used and purchases will appear here.
         </div>
       ) : history.map((entry, i) => {
-        const { icon, label } = LABELS[entry.action] || { icon:'📋', label: entry.action };
+        const { icon, label } = LABELS[entry.action] || { icon:'clipboard', label: entry.action };
         return (
           <div key={entry.id} style={{ display:'flex', gap:12, padding:'10px 0',
             borderBottom: i < history.length-1 ? '1px solid var(--color-gray-bg)' : 'none' }}>
             <div style={{ width:30, height:30, borderRadius:'50%', background:'var(--color-purple-4)',
               display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, flexShrink:0 }}>
-              {icon}
+              <Icon name={icon} size={14} />
             </div>
             <div style={{ flex:1 }}>
               <div style={{ fontSize:12.5, fontWeight:600, color:'var(--color-dark)' }}>{label}</div>

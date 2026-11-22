@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
+import { Icon, IconLabel } from '../../components/Icon';
 
 const BASE = '/.netlify/functions/video-viewer';
 
@@ -89,7 +90,7 @@ export default function VideoViewer() {
   if (state === 'expired') return (
     <ViewerShell brand={brand}>
       <div style={{ textAlign:'center', padding:48 }}>
-        <div style={{ fontSize:48, marginBottom:16 }}>🔒</div>
+        <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom: 16 }}><Icon name="lock" size={24} /></div>
         <div style={{ fontFamily:'Georgia,serif', fontSize:22, fontWeight:700, color:'var(--color-dark)', marginBottom:8 }}>This link has expired</div>
         <div style={{ fontSize:14, color:'var(--color-muted)' }}>{error}</div>
         <div style={{ fontSize:14, color:'var(--color-muted)', marginTop:16 }}>
@@ -98,9 +99,9 @@ export default function VideoViewer() {
         {(contact?.email || contact?.phone) && (
           <div style={{ display:'flex', gap:10, justifyContent:'center', flexWrap:'wrap', marginTop:16 }}>
             {contact.email && <a href={`mailto:${contact.email}?subject=${encodeURIComponent('New walkthrough link')}`}
-              style={{ padding:'11px 18px', background:'var(--color-dark)', color:'#fff', borderRadius:10, textDecoration:'none', fontSize:14, fontWeight:600 }}>✉ Email {contact.firmName || 'your advisor'}</a>}
+              style={{ padding:'11px 18px', background:'var(--color-dark)', color:'#fff', borderRadius:10, textDecoration:'none', fontSize:14, fontWeight:600 }}><Icon name="mail" /> Email {contact.firmName || 'your advisor'}</a>}
             {contact.phone && <a href={`tel:${contact.phone}`}
-              style={{ padding:'11px 18px', background:'#fff', color:'var(--color-dark)', border:'1px solid var(--color-border)', borderRadius:10, textDecoration:'none', fontSize:14, fontWeight:600 }}>📞 {contact.phone}</a>}
+              style={{ padding:'11px 18px', background:'#fff', color:'var(--color-dark)', border:'1px solid var(--color-border)', borderRadius:10, textDecoration:'none', fontSize:14, fontWeight:600 }}><Icon name="phone" /> {contact.phone}</a>}
           </div>
         )}
       </div>
@@ -110,7 +111,7 @@ export default function VideoViewer() {
   if (state === 'error') return (
     <ViewerShell brand={brand}>
       <div style={{ textAlign:'center', padding:48 }}>
-        <div style={{ fontSize:48, marginBottom:16 }}>❌</div>
+        <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom: 16 }}><Icon name="error" size={24} /></div>
         <div style={{ fontFamily:'Georgia,serif', fontSize:22, fontWeight:700, color:'var(--color-dark)', marginBottom:8 }}>Link not found</div>
         <div style={{ fontSize:14, color:'var(--color-muted)' }}>{error || 'This link may be incomplete or no longer valid.'}</div>
         <div style={{ fontSize:14, color:'var(--color-muted)', marginTop:12 }}>Try opening the link again from your email, making sure the whole address was copied. If it still doesn\'t work, contact your tax advisor.</div>
@@ -171,7 +172,7 @@ export default function VideoViewer() {
         ) : hasAudio ? (
           <div style={{ background:'var(--color-dark)', borderRadius:14, padding:24, marginBottom:20 }}>
             <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:16 }}>
-              <div style={{ width:48, height:48, borderRadius:'50%', background:brand, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>🎙️</div>
+              <div style={{ width:48, height:48, borderRadius:'50%', background:brand, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}><Icon name="mic" /> </div>
               <div>
                 <div style={{ fontSize:14, fontWeight:700, color:'#fff' }}>Audio walkthrough</div>
                 <div style={{ fontSize:11, color:'rgba(255,255,255,.5)' }}>
@@ -236,7 +237,7 @@ export default function VideoViewer() {
         <div style={{ marginTop:16, padding:'8px 14px', background:'var(--color-amber-pale)',
           border:'1px solid var(--color-amber-border)', borderRadius:8, fontSize:13, color:'var(--color-amber-dark)',
           display:'flex', alignItems:'center', gap:8 }}>
-          <span>⚠️</span>
+          <span><Icon name="warning" /> </span>
           <span>For informational purposes only — not tax advice. Consult your advisor before making financial decisions.</span>
         </div>
 
@@ -270,7 +271,7 @@ export default function VideoViewer() {
               style={{ flex:1, minWidth:180, display:'flex', alignItems:'center', justifyContent:'center', gap:7,
                 padding:'11px 16px', background:'var(--color-dark)', color:'#fff', borderRadius:10,
                 textDecoration:'none', fontSize:13, fontWeight:600, border:'1px solid rgba(255,255,255,.1)' }}>
-              📄 Download PDF summary
+              <Icon name="file" /> Download PDF summary
             </a>
           )}
           {/* Inline reply form — uses client-message function, no email client needed */}
@@ -305,7 +306,7 @@ export default function VideoViewer() {
                 style={{ marginTop:8, width:'100%', padding:'10px', background:brand, color:'#fff',
                   border:'none', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer',
                   fontFamily:'inherit', opacity:msgSending||!msgBody.trim()?0.6:1 }}>
-                {msgSending ? 'Sending…' : `💬 Send message to ${data.firmName}`}
+                {msgSending ? 'Sending…' : `Send message to ${data.firmName}`}
               </button>
             </div>
           ) : (

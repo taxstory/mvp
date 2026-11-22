@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import CreditHistory   from './CreditHistory';
 
 import { useToast } from '../../components/ui/Toast';
+import { Icon, IconLabel } from '../../components/Icon';
 // ─── Plan definitions ─────────────────────────────────────────────────────────
 const PLANS = {
   cpa_basic: {
@@ -240,7 +241,7 @@ export function BillingPage() {
         <div className="ts-card" style={{ border: lowCredits ? '1.5px solid var(--color-amber-border)' : '1.5px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--dark)' }}>🎬 Walkthrough credits</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--dark)' }}><Icon name="video" /> Walkthrough credits</div>
               <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>Resets annually · stack when purchased</div>
             </div>
             <button className="ts-btn ts-btn-primary ts-btn-sm" onClick={() => { setShowCredits(!showCredits); setShowPlans(false); }}>
@@ -266,8 +267,8 @@ export function BillingPage() {
           </div>
 
           {lowCredits && (
-            <div style={{ marginTop: '10px', background: 'var(--amber-bg)', border: '1px solid var(--color-amber-border)', color: 'var(--color-amber-dark)', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 500 }}>
-              ⚠️ Running low — purchase credits to keep generating videos
+            <div className="ts-note ts-alert-warning ts-note-compact" style={{ marginTop:'10px', fontWeight:500 }}>
+              <Icon name="warning" /> Running low — purchase credits to keep generating videos
             </div>
           )}
 
@@ -279,7 +280,7 @@ export function BillingPage() {
           {packBalance > 0 && (
             <div style={{ marginTop:8, padding:'8px 12px', background:'var(--purple3)',
               borderRadius:8, fontSize:11.5, color:'var(--purple)', fontWeight:500 }}>
-              🎟 You have <strong>{packBalance}</strong> pack credits (never expire) + <strong>{Math.max(0,creditsTotal - creditsUsed - packBalance)}</strong> plan credits (reset at renewal)
+              <Icon name="ticket" /> You have <strong>{packBalance}</strong> pack credits (never expire) + <strong>{Math.max(0,creditsTotal - creditsUsed - packBalance)}</strong> plan credits (reset at renewal)
             </div>
           )}
               </div>
@@ -315,7 +316,7 @@ export function BillingPage() {
         {/* Projections widget */}
         <div className="ts-card">
           <div style={{ marginBottom: '12px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--dark)' }}>📊 Projections</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--dark)' }}><Icon name="projections" /> Projections</div>
             <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>tax projections & investment planning · resets annually</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '8px' }}>
@@ -344,7 +345,7 @@ export function BillingPage() {
       <div className="ts-card">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--dark)', marginBottom: '3px' }}>💳 Payment method & invoices</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--dark)', marginBottom: '3px' }}><Icon name="billing" /> Payment method & invoices</div>
             <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
               {isActive
                 ? 'Update your card, download invoices, or cancel your subscription via the Stripe billing portal.'
@@ -467,7 +468,7 @@ export function SettingsPage() {
             <div className="ts-frow"><label className="ts-fl">Website <span>optional</span></label><input type="text" value={firmForm.website} onChange={updFirm('website')} placeholder="yourfirm.com" /></div>
           </div>
           <div className="ts-frow"><label className="ts-fl">Account email</label><input type="email" value={user?.email || ''} disabled style={{ background: 'var(--bg)', color: 'var(--muted)' }} /></div>
-          {firmError && <div style={{ background: 'var(--color-red-light)', color: 'var(--color-red-dark)', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', marginBottom: '10px' }}>{firmError}</div>}
+          {firmError && <div className="ts-note ts-alert-danger ts-note-compact" role="alert" style={{ marginBottom:'10px' }}>{firmError}</div>}
           <button className="ts-btn ts-btn-primary ts-btn-sm" onClick={saveFirmProfile} disabled={firmSaving} aria-busy={firmSaving}>{firmSaved ? '✓ Saved' : firmSaving ? 'Saving…' : 'Save changes'}</button>
         </div>
         <div className="ts-card">
@@ -488,7 +489,7 @@ export function SettingsPage() {
                 </div>
               ) : (
                 <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                  <div style={{ fontSize: '20px', marginBottom: '6px' }}>🖼️</div>
+                  <div style={{ fontSize: '20px', marginBottom: '6px' }}><Icon name="image" /> </div>
                   {logoUploading
                     ? 'Uploading…'
                     : logoLoadError
@@ -510,8 +511,8 @@ export function SettingsPage() {
           <div className="ts-card-title">Change password</div>
           <div className="ts-frow"><label className="ts-fl">New password</label><input type="password" value={pwForm.next} onChange={e => setPwForm(p => ({ ...p, next: e.target.value }))} placeholder="Min 8 characters" /></div>
           <div className="ts-frow"><label className="ts-fl">Confirm password</label><input type="password" value={pwForm.confirm} onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))} placeholder="Repeat new password" /></div>
-          {pwError && <div style={{ background: 'var(--color-red-light)', color: 'var(--color-red-dark)', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', marginBottom: '10px' }}>{pwError}</div>}
-          {pwMsg   && <div style={{ background: 'var(--green-bg)', color: 'var(--green-dark)', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', marginBottom: '10px' }}>{pwMsg}</div>}
+          {pwError && <div className="ts-note ts-alert-danger ts-note-compact" role="alert" style={{ marginBottom:'10px' }}>{pwError}</div>}
+          {pwMsg   && <div className="ts-note ts-alert-success ts-note-compact" role="status" style={{ marginBottom:'10px' }}>{pwMsg}</div>}
           <button className="ts-btn ts-btn-primary ts-btn-sm" onClick={changePassword} disabled={pwSaving} aria-busy={pwSaving}>{pwSaving ? 'Updating…' : 'Update password'}</button>
         </div>
         <div className="ts-card">
@@ -539,7 +540,7 @@ export function SettingsPage() {
     {profile?.founding_member && (
       <div style={{ padding:'12px 16px', background:'linear-gradient(135deg,var(--color-dark),var(--color-purple))',
         borderRadius:12, marginBottom:12, display:'flex', alignItems:'center', gap:12 }}>
-        <span style={{ fontSize:24 }}>⭐</span>
+        <span style={{ color:'var(--warning)' }}><Icon name="star" size={22} /></span>
         <div>
           <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>Founding Member</div>
           <div style={{ fontSize:11.5, color:'rgba(255,255,255,.65)', marginTop:2 }}>

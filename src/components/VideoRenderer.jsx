@@ -12,6 +12,7 @@
 
 import { useRef, useState } from 'react';
 import { Output, BufferTarget, Mp4OutputFormat, WebMOutputFormat, CanvasSource, AudioBufferSource, canEncodeVideo, canEncodeAudio } from 'mediabunny';
+import { Icon, IconLabel } from './Icon';
 
 const FPS    = 30;
 const WIDTH  = 1280;
@@ -487,7 +488,7 @@ export default function VideoRenderer({
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
           <button onClick={render}
             style={{ padding: '11px 28px', background: BRAND.purple, color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-            🎬 Render video
+            <Icon name="video" /> Render video
           </button>
           <div style={{ fontSize: 11, color: 'var(--color-muted)', marginTop: 8 }}>
             {webCodecsSupported
@@ -528,7 +529,7 @@ export default function VideoRenderer({
       )}
 
       {status === 'error' && (
-        <div style={{ background: 'var(--color-red-light)', color: 'var(--color-red-dark)', padding: '12px 14px', borderRadius: 10, fontSize: 13 }}>{errorMsg}</div>
+        <div className="ts-note ts-alert-danger" role="alert">{errorMsg}</div>
       )}
     </div>
   );

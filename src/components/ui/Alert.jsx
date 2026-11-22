@@ -1,102 +1,41 @@
 // src/components/ui/Alert.jsx
 //
-// Inline alert/banner for feedback, errors, and status messages.
-// Replaces the 25+ hand-rolled colored divs spread across every page.
+// A message on the page: errors, warnings, confirmations, notes. Styled by .ts-alert in index.css.
+// For the RESULT of an action ("Saved", "Link copied") use a toast (useToast) instead.
 //
-// Props:
-//   variant   'info' | 'success' | 'warning' | 'danger'   (default: 'info')
-//   title     string — bold heading line (optional)
-//   icon      ReactNode | boolean — false to hide icon, true/string to show
-//   onDismiss () => void — shows ✕ button when provided
-//   compact   boolean — reduces padding for inline use
-//
-// Usage:
 //   <Alert variant="danger">{error}</Alert>
-//   <Alert variant="success" title="Return parsed">12 fields extracted.</Alert>
-//   <Alert variant="warning" onDismiss={() => setWarn(null)}>
-//     Rental loss suspended by §469 — see Planning flags.
-//   </Alert>
-//   <Alert variant="info" compact>
-//     🔒 PII is never stored — only financial figures leave this function.
-//   </Alert>
+//   <Alert variant="success" title="Return read">12 fields found.</Alert>
+//   <Alert variant="warning" onDismiss={() => setWarn(null)}>Some amounts need checking.</Alert>
+//   <Alert variant="info" compact>Return PDFs never leave this device.</Alert>
+//
+// Props: variant 'info' | 'success' | 'warning' | 'danger'; title; icon (false hides it, or a lucide component);
+//        onDismiss; compact; action (a node shown on the right, e.g. a Button).
 
-const ALERT_VARIANTS = {
-  info:    { bg: 'var(--color-blue-bg)',     border: 'var(--color-blue-border)',  color: 'var(--color-blue)',      icon: 'ℹ️' },
-  success: { bg: 'var(--color-green-bg)',    border: 'var(--color-green-pale)',   color: 'var(--color-green-dark)',icon: '✓'  },
-  warning: { bg: 'var(--color-amber-light)', border: 'var(--color-amber-border)', color: 'var(--color-amber-dark)',icon: '⚠️' },
-  danger:  { bg: 'var(--color-red-light)',   border: 'var(--color-red-border)',   color: 'var(--color-red-dark)', icon: '✕'  },
-};
+import { createElement, isValidElement } from 'react';
+import { Info, CircleCheck, TriangleAlert, CircleAlert, X } from 'lucide-react';
 
-export function Alert({
-  children,
-  variant   = 'info',
-  title,
-  icon,
-  onDismiss,
-  compact   = false,
-  role      = 'status',
-  className = '',
-  style     = {},
-  ...rest
-}) {
-  const v        = ALERT_VARIANTS[variant] || ALERT_VARIANTS.info;
-  const showIcon = icon !== false;
-  const iconChar = typeof icon === 'string' ? icon : (icon === true || icon === undefined ? v.icon : null);
+const ICONS = { info: Info, success: CircleCheck, warning: TriangleAlert, danger: CircleAlert };
 
+export function Alert({ children, variant = 'info', title, icon, onDismiss, compact = false, action, className = '', style, role, ...rest }) {
+  const Ico = icon === false ? null : (icon || ICONS[variant] || Info);
+  const urgent = variant === 'danger';
   return (
     <div
-      role={variant === 'danger' ? 'alert' : role}
-      aria-live={variant === 'danger' ? 'assertive' : 'polite'}
-      aria-atomic="true"
-      className={`ts-alert ts-alert-${variant}${className ? ` ${className}` : ''}`}
-      style={{
-        display:      'flex',
-        alignItems:   title ? 'flex-start' : 'center',
-        gap:          10,
-        padding:      compact ? '8px 12px' : '11px 14px',
-        borderRadius: 'var(--radius-md)',
-        border:       `1px solid ${v.border}`,
-        background:   v.bg,
-        color:        v.color,
-        fontSize:     compact ? '12px' : '13px',
-        lineHeight:   1.5,
-        ...style,
-      }}
+      role={role || (urgent ? 'alert' : 'status')}
+      aria-live={urgent ? 'assertive' : 'polite'}
+      className={`ts-alert ts-alert-${variant}${compact ? ' ts-alert-compact' : ''}${className ? ` ${className}` : ''}`}
+      style={style}
       {...rest}
     >
-      {showIcon && iconChar && (
-        <span aria-hidden="true" style={{ flexShrink: 0, fontSize: compact ? 13 : 15 }}>
-          {iconChar}
-        </span>
-      )}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {title && (
-          <div style={{ fontWeight: 700, marginBottom: 2, fontSize: compact ? '12px' : '13px' }}>
-            {title}
-          </div>
-        )}
+      {Ico && (isValidElement(Ico) ? Ico : createElement(Ico, { size: compact ? 15 : 17, 'aria-hidden': true, className: 'ts-alert-icon' }))}
+      <div className="ts-alert-body">
+        {title && <div className="ts-alert-title">{title}</div>}
         <div>{children}</div>
       </div>
+      {action && <div className="ts-alert-action">{action}</div>}
       {onDismiss && (
-        <button
-          onClick={onDismiss}
-          aria-label="Dismiss"
-          style={{
-            background:  'none',
-            border:      'none',
-            cursor:      'pointer',
-            color:       v.color,
-            opacity:     0.7,
-            fontSize:    14,
-            padding:     '0 2px',
-            lineHeight:  1,
-            flexShrink:  0,
-            fontFamily:  'inherit',
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; }}
-        >
-          ✕
+        <button type="button" className="ts-alert-x" onClick={onDismiss} aria-label="Dismiss">
+          <X size={15} aria-hidden="true" />
         </button>
       )}
     </div>

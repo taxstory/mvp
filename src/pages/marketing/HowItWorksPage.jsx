@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import MarketingNav    from '../../components/marketing/MarketingNav';
 import MarketingFooter from '../../components/marketing/MarketingFooter';
 import { FEATURES } from '../../config/features';
+import { Icon, IconLabel } from '../../components/Icon';
 
 const RETURN_STEPS = [
   { step: '01', title: 'Start from the completed return', desc: 'Drop in the client copy exported from your tax software, or enter the figures yourself. The PDF is read in your browser and never uploaded.' },
@@ -66,7 +67,7 @@ export default function HowItWorksPage() {
       {/* Security callout */}
       <section className="py-12 px-6 bg-brand-light">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="text-3xl mb-3">🔒</div>
+          <div className="text-3xl mb-3"><Icon name="lock" /> </div>
           <h3 className="font-semibold text-brand-dark text-xl mb-2">PII-Free by Design — not by policy</h3>
           <p className="text-gray-600 text-sm leading-relaxed">
             Most tools parse everything and then try to remove sensitive data. TaxStory reads the return in your browser and keeps only the financial figures. Names, SSNs, addresses and dates of birth never reach our servers — because we never ask for them.
@@ -94,15 +95,15 @@ export default function HowItWorksPage() {
           <p className="text-gray-500 mb-12 max-w-lg mx-auto">TaxStory is built on the infrastructure your clients expect from a professional-grade tool.</p>
           <div className="grid md:grid-cols-3 gap-8 text-left">
             {[
-              { icon: '📝', title: 'Reviewed, fixed wording', desc: 'Scripts are built from the return\'s own figures in fixed, reviewed sentences — every amount is checked before it is narrated.' },
-              { icon: '🎙️', title: 'Natural narration', desc: 'High-quality text-to-speech voiceover. Only the narration text is sent — never a name or ID number.' },
-              { icon: '🧮', title: 'Federal tax engine, 2024–2026', desc: 'Brackets, capital gains, NIIT, credits, required distributions and Social Security, updated for the 2025 tax law changes and tested case by case.' },
-              { icon: '🔐', title: 'Supabase + Row Level Security', desc: 'Your data is isolated at the database level. No user can access another firm\'s data.' },
-              { icon: '⚡', title: 'Built for tax season', desc: 'Voiceovers are made in the background, so you can keep working while a walkthrough is prepared.' },
-              { icon: '📊', title: 'SOC 2 in progress', desc: 'Policy library, audit logging and access controls in place; SOC 2 Type I audit underway.' },
+              { icon: 'note', title: 'Reviewed, fixed wording', desc: 'Scripts are built from the return\'s own figures in fixed, reviewed sentences — every amount is checked before it is narrated.' },
+              { icon: 'mic', title: 'Natural narration', desc: 'High-quality text-to-speech voiceover. Only the narration text is sent — never a name or ID number.' },
+              { icon: 'calculator', title: 'Federal tax engine, 2024–2026', desc: 'Brackets, capital gains, NIIT, credits, required distributions and Social Security, updated for the 2025 tax law changes and tested case by case.' },
+              { icon: 'shield', title: 'Supabase + Row Level Security', desc: 'Your data is isolated at the database level. No user can access another firm\'s data.' },
+              { icon: 'zap', title: 'Built for tax season', desc: 'Voiceovers are made in the background, so you can keep working while a walkthrough is prepared.' },
+              { icon: 'projections', title: 'SOC 2 in progress', desc: 'Policy library, audit logging and access controls in place; SOC 2 Type I audit underway.' },
             ].map(item => (
               <div key={item.title} className="bg-gray-50 rounded-xl p-6">
-                <div className="text-3xl mb-3">{item.icon}</div>
+                <div className="ts-ico-tile mb-3"><Icon name={item.icon} size={20} /></div>
                 <h3 className="font-semibold text-brand-dark mb-1">{item.title}</h3>
                 <p className="text-sm text-gray-500 leading-relaxed">{item.desc}</p>
               </div>

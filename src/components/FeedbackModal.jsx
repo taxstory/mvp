@@ -5,12 +5,13 @@
 import { useState } from 'react';
 import { useAuth }  from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { Icon, IconLabel } from './Icon';
 
 const TYPES = [
-  { value: 'bug',     emoji: '🐛', label: 'Bug report'       },
-  { value: 'ux',      emoji: '👁', label: 'UX issue'         },
-  { value: 'feature', emoji: '💡', label: 'Feature request'  },
-  { value: 'other',   emoji: '📝', label: 'Other feedback'   },
+  { value: 'bug',     emoji: 'bug', label: 'Bug report'       },
+  { value: 'ux',      emoji: 'eye', label: 'UX issue'         },
+  { value: 'feature', emoji: 'idea', label: 'Feature request'  },
+  { value: 'other',   emoji: 'note', label: 'Other feedback'   },
 ];
 
 const SEVERITIES = [
@@ -81,7 +82,7 @@ export default function FeedbackModal({ onClose }) {
           {sent ? (
             /* Success state */
             <div style={{ textAlign:'center', padding:'24px 0' }}>
-              <div style={{ fontSize:48, marginBottom:12 }}>✅</div>
+              <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom: 12 }}><Icon name="success" size={24} /></div>
               <div style={{ fontSize:16, fontWeight:700, color:'var(--color-dark)', marginBottom:8 }}>
                 Thanks — we got it!
               </div>
@@ -90,9 +91,7 @@ export default function FeedbackModal({ onClose }) {
                 within 24 hours and follow up by email if we need more detail.
               </div>
               <button onClick={onClose}
-                style={{ padding:'10px 24px', background:'var(--color-purple)', color:'#fff',
-                  border:'none', borderRadius:10, fontSize:14, fontWeight:600,
-                  cursor:'pointer', fontFamily:'inherit' }}>
+                className="ts-btn ts-btn-primary">
                 Close
               </button>
             </div>
@@ -113,7 +112,7 @@ export default function FeedbackModal({ onClose }) {
                         background: type === t.value ? 'var(--color-purple-3)' : '#fff',
                         color: type === t.value ? 'var(--color-purple)' : 'var(--color-muted)',
                         transition:'all .12s' }}>
-                      {t.emoji} {t.label}
+                      <IconLabel icon={t.emoji} size={14}>{t.label}</IconLabel>
                     </button>
                   ))}
                 </div>
@@ -185,11 +184,7 @@ export default function FeedbackModal({ onClose }) {
               <button
                 onClick={handleSubmit}
                 disabled={sending || !description.trim()}
-                style={{ width:'100%', padding:'12px', background:'var(--color-purple)', color:'#fff',
-                  border:'none', borderRadius:10, fontSize:14, fontWeight:700,
-                  cursor:'pointer', fontFamily:'inherit',
-                  opacity: sending || !description.trim() ? 0.65 : 1,
-                  transition:'opacity .15s' }}>
+                className="ts-btn ts-btn-primary ts-btn-block">
                 {sending ? 'Sending…' : 'Send feedback'}
               </button>
             </>

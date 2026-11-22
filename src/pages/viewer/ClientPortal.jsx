@@ -8,6 +8,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, Link }     from 'react-router-dom';
+import { Icon, IconLabel } from '../../components/Icon';
 
 const BASE = '/.netlify/functions/client-portal';
 
@@ -47,7 +48,7 @@ export default function ClientPortal() {
   if (state === 'error') return (
     <PortalShell>
       <div style={{ textAlign:'center', padding:64 }}>
-        <div style={{ fontSize:48, marginBottom:16 }}>❌</div>
+        <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom: 16 }}><Icon name="error" size={24} /></div>
         <div style={{ fontFamily:'Georgia,serif', fontSize:20, fontWeight:700, color:'var(--color-dark)', marginBottom:8 }}>
           Portal not found
         </div>
@@ -77,7 +78,7 @@ export default function ClientPortal() {
 
         {walkthroughs.length === 0 ? (
           <div style={{ textAlign:'center', padding:'48px 0', color:'var(--color-muted)', fontSize:14 }}>
-            <div style={{ fontSize:40, marginBottom:12 }}>📭</div>
+            <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom: 12 }}><Icon name="inbox" size={24} /></div>
             No walkthroughs yet. Your advisor will share one here when it's ready.
           </div>
         ) : (
@@ -106,19 +107,19 @@ export default function ClientPortal() {
               {firmInfo.phone && (
                 <a href={`tel:${firmInfo.phone}`}
                   style={{ fontSize:13, color:'var(--color-purple)', textDecoration:'none', fontWeight:500 }}>
-                  📞 {firmInfo.phone}
+                  <Icon name="phone" /> {firmInfo.phone}
                 </a>
               )}
               {firmInfo.web && /^https:\/\//i.test(firmInfo.web) && (   // only ever link a validated https URL (a javascript: link would run on our origin)
                 <a href={firmInfo.web} target="_blank" rel="noreferrer"
                   style={{ fontSize:13, color:'var(--color-purple)', textDecoration:'none', fontWeight:500 }}>
-                  🌐 {firmInfo.web.replace(/^https?:\/\//, '')}
+                  <Icon name="globe" /> {firmInfo.web.replace(/^https?:\/\//, '')}
                 </a>
               )}
               {firmInfo.email && (
                 <a href={`mailto:${firmInfo.email}`}
                   style={{ fontSize:13, color:'var(--color-purple, var(--color-purple))', textDecoration:'none', fontWeight:500 }}>
-                  ✉️ {firmInfo.email}
+                  <Icon name="mail" /> {firmInfo.email}
                 </a>
               )}
             </div>
@@ -178,9 +179,9 @@ function YearTimeline({ walkthroughs }) {
 function WalkthroughCard({ walkthrough: w }) {
   const hasViewer = w.viewerToken && w.hasVideo;
   const statusLabel = {
-    audio_ready:  { icon:'🎬', text:'Ready to watch', color:'var(--color-green-dark)', bg:'var(--color-green-light)' },
-    script_ready: { icon:'📝', text:'In progress',    color:'var(--color-amber-dark)', bg:'var(--color-amber-light)' },
-    parsed:       { icon:'📊', text:'Processing',     color:'var(--color-blue)', bg:'var(--color-blue-light)' },
+    audio_ready:  { icon:'video', text:'Ready to watch', color:'var(--color-green-dark)', bg:'var(--color-green-light)' },
+    script_ready: { icon:'note', text:'In progress',    color:'var(--color-amber-dark)', bg:'var(--color-amber-light)' },
+    parsed:       { icon:'projections', text:'Processing',     color:'var(--color-blue)', bg:'var(--color-blue-light)' },
   }[w.status] || { icon:'⏳', text:'Pending', color:'var(--color-muted)', bg:'var(--color-gray-light)' };
 
   return (
@@ -202,7 +203,7 @@ function WalkthroughCard({ walkthrough: w }) {
         <span style={{ display:'inline-flex', alignItems:'center', gap:5,
           padding:'4px 10px', borderRadius:20, fontSize:11.5, fontWeight:600,
           background:statusLabel.bg, color:statusLabel.color, flexShrink:0 }}>
-          {statusLabel.icon} {statusLabel.text}
+          <Icon name={statusLabel.icon} size={13} /> {statusLabel.text}
         </span>
       </div>
 
@@ -228,7 +229,7 @@ function WalkthroughCard({ walkthrough: w }) {
             style={{ display:'flex', alignItems:'center', gap:6, padding:'11px 16px',
               background:'var(--color-dark)', color:'#fff', borderRadius:10,
               textDecoration:'none', fontSize:13, fontWeight:600 }}>
-            📄 Download PDF
+            <Icon name="file" /> Download PDF
           </a>
         )}
       </div>
