@@ -16,8 +16,13 @@ Deploys → **Stop auto publishing**. Turn it back on once the fix is merged.
     git revert <bad-commit>       # creates a new commit that undoes it; never rewrite main's history
     git push origin main
 
-Known-good points are tagged in git (`git tag -l 'release-*'`). To see what changed since one:
-`git diff release-2026-11-22 main --stat`.
+Known-good points (add one each time a release has been checked on the live site):
+
+| Date | Commit | What |
+|---|---|---|
+| 2026-11-22 | `cc79571` | Design system, launch hardening |
+
+To see what changed since one: `git diff cc79571 main --stat`. (You can also mark it in GitHub → Releases → Draft a new release.)
 
 ## 2. Database
 
