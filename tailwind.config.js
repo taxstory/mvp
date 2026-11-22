@@ -6,6 +6,7 @@ module.exports = {
       colors: {
         brand: {
           purple: '#6B5CE7',
+          'purple-hover': '#5A4BD6',   // the one hover shade, shared with the app's .ts-btn-primary
           dark:   '#1A1230',
           light:  '#F4F2FF',
         },

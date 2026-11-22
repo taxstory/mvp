@@ -45,8 +45,8 @@ export default function LoginPage() {
             <div className="text-right">
               <Link to="/reset-password" className="text-xs text-brand-purple hover:underline">Forgot password?</Link>
             </div>
-            <button type="submit" disabled={loading}
-              className="w-full bg-brand-purple hover:bg-purple-700 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50">
+            <button type="submit" disabled={loading} aria-busy={loading}
+              className="w-full bg-brand-purple hover:bg-brand-purple-hover text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50">
               {loading ? 'Signing in…' : 'Sign In'}
             </button>
           </form>

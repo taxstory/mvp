@@ -94,7 +94,6 @@ export const Button = forwardRef(function Button(
     userSelect:     'none',
     width:          fullWidth ? '100%' : undefined,
     boxSizing:      'border-box',
-    outline:        'none',
     ...style,
   };
 

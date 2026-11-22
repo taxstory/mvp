@@ -140,12 +140,12 @@ export default function SettingsPage() {
   if (loading) return <div style={{ padding:32, color:'var(--muted)' }}>Loading…</div>;
 
   return (
-    <div style={{ padding:'28px 32px', maxWidth:680, fontFamily:'Inter,system-ui,sans-serif' }}>
+    <div className="ts-page" style={{ maxWidth:680 }}>
 
       {/* Page header */}
       <div style={{ marginBottom:22 }}>
-        <div style={{ fontFamily:'Playfair Display,serif', fontSize:22, fontWeight:700, color:'var(--dark)', marginBottom:3 }}>Settings</div>
-        <div style={{ fontSize:13, color:'var(--muted)' }}>
+        <div className="ts-page-title">Settings</div>
+        <div className="ts-page-sub">
           Your firm profile powers every client-facing output — videos, emails, and PDF summaries.
         </div>
       </div>
@@ -315,7 +315,7 @@ export default function SettingsPage() {
       {/* Save button */}
       <button
         onClick={save}
-        disabled={saving}
+        disabled={saving} aria-busy={saving}
         style={{ width:'100%', padding:'13px', background:'var(--purple)', color:'#fff', border:'none',
           borderRadius:11, fontSize:14, fontWeight:700, cursor:saving?'not-allowed':'pointer',
           fontFamily:'inherit', opacity:saving?0.7:1 }}
@@ -358,7 +358,7 @@ export default function SettingsPage() {
               style={{ width:'100%', padding:'9px 11px', border:'1px solid var(--color-border)', borderRadius:8, fontSize:13, marginBottom:10, fontFamily:'inherit' }} />
             {delError && <div style={{ color:'var(--color-red-dark)', fontSize:12.5, marginBottom:10 }}>{delError}</div>}
             <div style={{ display:'flex', gap:8 }}>
-              <button onClick={deleteAccount} disabled={delBusy || delText !== 'DELETE' || !delPw}
+              <button onClick={deleteAccount} disabled={delBusy || delText !== 'DELETE' || !delPw} aria-busy={delBusy}
                 style={{ padding:'9px 16px', background:'var(--color-red-mid)', color:'#fff', border:'none', borderRadius:9, fontSize:13, fontWeight:700, fontFamily:'inherit',
                   cursor: delBusy || delText !== 'DELETE' || !delPw ? 'not-allowed' : 'pointer', opacity: delBusy || delText !== 'DELETE' || !delPw ? .6 : 1 }}>
                 {delBusy ? 'Deleting…' : 'Permanently delete'}

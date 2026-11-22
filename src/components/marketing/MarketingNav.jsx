@@ -17,7 +17,7 @@ export default function MarketingNav() {
         <Link to="/login" className="text-sm text-gray-300 hover:text-white transition-colors">
           Sign In
         </Link>
-        <Link to="/signup" className="bg-brand-purple hover:bg-purple-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+        <Link to="/signup" className="bg-brand-purple hover:bg-brand-purple-hover text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
           Start Free Trial
         </Link>
       </div>

@@ -255,7 +255,7 @@ export default function RIAProjections() {
           {error && <div style={{background:'var(--color-red-light)',color:'var(--color-red-dark)',padding:'10px 14px',borderRadius:'10px',fontSize:'13px'}}>{error}</div>}
           <div style={{display:'flex',gap:'10px'}}>
             <button className="ts-btn ts-btn-secondary" style={{flex:1}} onClick={()=>setView('list')}>Cancel</button>
-            <button className="ts-btn ts-btn-primary" style={{flex:2}} onClick={handleSave} disabled={saving}>{saving?'Saving…':'Build projection →'}</button>
+            <button className="ts-btn ts-btn-primary" style={{flex:2}} onClick={handleSave} disabled={saving} aria-busy={saving}>{saving?'Saving…':'Build projection →'}</button>
           </div>
         </div>
 

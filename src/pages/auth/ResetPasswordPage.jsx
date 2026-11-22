@@ -41,8 +41,8 @@ export default function ResetPasswordPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
                   className="input" placeholder="you@yourfirm.com" />
-                <button type="submit" disabled={loading}
-                  className="w-full bg-brand-purple hover:bg-purple-700 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50">
+                <button type="submit" disabled={loading} aria-busy={loading}
+                  className="w-full bg-brand-purple hover:bg-brand-purple-hover text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50">
                   {loading ? 'Sending…' : 'Send Reset Link'}
                 </button>
               </form>

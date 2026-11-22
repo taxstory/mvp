@@ -30,7 +30,7 @@ const STEPS = [
     icon:  '🔗',
     title: 'Send it to a client',
     desc:  'Generate a share link from the walkthrough list and send it — you\'ll be notified when they watch.',
-    cta:   'Send to a client →',
+    cta:   'Send to a client',
     route: '/cpa/video',
   },
 ];
@@ -73,7 +73,7 @@ export default function GettingStarted({ completedSteps = {}, onDismiss }) {
       </div>
 
       {/* Steps */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
+      <div className="ts-g3b" style={{ gap:10 }}>
         {STEPS.map((step, i) => {
           const done = !!completedSteps[step.id];
           return (

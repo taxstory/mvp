@@ -116,7 +116,7 @@ export default function HowItWorksPage() {
         <h2 className="font-serif text-4xl font-bold mb-4">Ready to see it for yourself?</h2>
         <p className="text-gray-300 mb-8 max-w-md mx-auto">Start your free 14-day trial. No credit card required. Full access from day one.</p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link to="/signup" className="bg-brand-purple hover:bg-purple-600 text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors">
+          <Link to="/signup" className="bg-brand-purple hover:bg-brand-purple-hover text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors">
             Start Free Trial
           </Link>
           <Link to="/pricing" className="border border-white/30 hover:border-white text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors">

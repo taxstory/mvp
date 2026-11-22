@@ -68,8 +68,8 @@ export default function SignUpPage() {
               <input type="password" required minLength={8} value={form.password} onChange={update('password')}
                 className="input" placeholder="At least 8 characters" />
             </div>
-            <button type="submit" disabled={loading}
-              className="w-full bg-brand-purple hover:bg-purple-700 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50">
+            <button type="submit" disabled={loading} aria-busy={loading}
+              className="w-full bg-brand-purple hover:bg-brand-purple-hover text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50">
               {loading ? 'Creating account…' : 'Start Free Trial'}
             </button>
           </form>

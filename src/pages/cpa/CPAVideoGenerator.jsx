@@ -479,7 +479,7 @@ export default function CPAVideoGenerator() {
                             View →
                           </button>
                           <button className="ts-btn ts-btn-ghost ts-btn-sm" title="Download a PDF of what was narrated, the figures, approvals and delivery — for your records"
-                            disabled={recordBusy === v.id} onClick={() => downloadRecord(v.id)}>
+                            disabled={recordBusy === v.id} aria-busy={recordBusy === v.id} onClick={() => downloadRecord(v.id)}>
                             {recordBusy === v.id ? '…' : 'Record ↓'}
                           </button>
                         </td>
@@ -607,6 +607,8 @@ export default function CPAVideoGenerator() {
                         Scene {i+1} — {(seg.field_ref||seg.section||'').replace(/_/g,' ')}
                       </div>
                       <textarea
+                        className="ts-field-bare"
+                        aria-label={`Narration for scene ${i+1}`}
                         value={seg.text}
                         onChange={e => {
                           const updated = [...segments];
@@ -615,7 +617,7 @@ export default function CPAVideoGenerator() {
                         }}
                         style={{width:'100%',border:'none',background:'transparent',fontSize:12.5,
                           color:'var(--dark)',resize:'none',fontFamily:'inherit',lineHeight:1.6,
-                          outline:'none',padding:0}}
+                          padding:0}}
                         rows={Math.max(2, Math.ceil(seg.text.length / 60))}
                       />
                     </div>
@@ -634,7 +636,7 @@ export default function CPAVideoGenerator() {
             )}
             {selectedId && credits > 0 && !awaitingScriptConfirm && (
               <button className="ts-btn ts-btn-primary" style={{ width: '100%', justifyContent: 'center' }}
-                onClick={handleGenerate} disabled={isGenerating}>
+                onClick={handleGenerate} disabled={isGenerating} aria-busy={isGenerating}>
                 🎬 Generate walkthrough — uses 1 credit
               </button>
             )}
@@ -849,7 +851,7 @@ export default function CPAVideoGenerator() {
                     placeholder="client@email.com"
                     style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 9, fontSize: 13, fontFamily: 'inherit', color: 'var(--dark)', boxSizing: 'border-box' }} />
                 </div>
-                <button type="submit" disabled={shareSending}
+                <button type="submit" disabled={shareSending} aria-busy={shareSending}
                   style={{ padding: '11px', background: 'var(--purple)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: shareSending ? 0.7 : 1 }}>
                   {shareSending ? 'Creating link…' : shareEmail.trim() ? '📧 Send to client' : '🔗 Create share link'}
                 </button>

@@ -304,15 +304,13 @@ export default function ScenarioProjections() {
   const updN = useCallback((k) => (v) => updateScenarioDebounced(activeTab, k, v), [activeTab, updateScenarioDebounced]);
 
   return (
-    <div style={{ padding: '28px 32px', maxWidth: 1400, fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div className="ts-page" style={{ maxWidth: 1400 }}>
 
       {/* Page header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 }}>
+      <div className="ts-hrow" style={{ flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 24, fontWeight: 700, color: 'var(--dark)', marginBottom: 4 }}>
-            Scenario Projections
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+          <div className="ts-page-title">Scenario Projections</div>
+          <div className="ts-page-sub">
             Model up to 3 tax scenarios side by side · Form 1040 / 1041 / 1065 / 1120 / 1120-S
           </div>
         </div>
@@ -352,7 +350,7 @@ export default function ScenarioProjections() {
               </div>
             )}
           </div>
-          <button onClick={saveScenarios} disabled={saving}
+          <button onClick={saveScenarios} disabled={saving} aria-busy={saving}
             style={{padding:'7px 13px',background:'var(--purple3)',color:'var(--purple)',border:'none',borderRadius:9,fontSize:12.5,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
             {savedMsg || (saving ? 'Saving…' : '💾 Save')}
           </button>

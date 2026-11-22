@@ -156,10 +156,32 @@ body {
 .ts-btn:hover   { opacity: 0.88; }
 .ts-btn:active  { transform: scale(0.98); }
 .ts-btn-primary   { background: var(--purple); color: white; }
+.ts-btn-primary:hover { background: #5A4BD6; opacity: 1; }   /* same hover shade as the marketing pages (brand-purple-hover) */
 .ts-btn-secondary { background: white; border: 1.5px solid var(--border); color: var(--dark); font-weight: 500; }
 .ts-btn-ghost     { background: var(--purple3); color: var(--purple); border: none; }
 .ts-btn-danger    { background: #FEE2E2; color: var(--red); border: none; }
 .ts-btn-sm        { padding: 6px 12px; font-size: 12px; border-radius: 8px; min-height: 36px; }
+
+/* States. Disabled must LOOK disabled (before this, 19 disabled buttons looked fully clickable).
+   Busy (aria-busy="true", set on buttons while they save/load) shows a spinner and keeps the label. */
+.ts-btn:disabled, .ts-btn[aria-disabled="true"],
+button:disabled[style] {               /* page-kit buttons styled inline get the same treatment */
+  opacity: 0.45 !important;
+  cursor: not-allowed;
+  transform: none !important;
+}
+.ts-btn-primary:disabled:hover { background: var(--purple); }
+.ts-btn:disabled:hover { opacity: 0.45; }
+button[aria-busy="true"] { cursor: progress !important; opacity: 0.75 !important; }
+button[aria-busy="true"]::before {
+  content: '';
+  width: 12px; height: 12px; flex-shrink: 0;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+  animation: ts-btn-spin 0.7s linear infinite;
+  display: inline-block; margin-right: 6px; vertical-align: -2px;
+}
+@keyframes ts-btn-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { button[aria-busy="true"]::before { animation-duration: 2s; } }
 
 /* ─── Cards ─── */
 .ts-card {
@@ -273,6 +295,38 @@ textarea {
 }
 input:focus, select:focus, textarea:focus { border-color: var(--purple); }
 input[type=range] { width: 100%; accent-color: var(--purple); }
+
+/* ONE field style for the whole app (the sidebar shell, onboarding, and dialogs opened from them).
+   Before this, pages styled fields inline and 9 different looks shipped, some with no focus indicator.
+   !important is deliberate: it is the only way a stylesheet beats inline styles, and the field look must win.
+   Width, margins and height of textareas stay with the page. Not applied to the client video viewer or portal,
+   which carry the firm's own branding. Opt out a deliberately borderless editor with .ts-field-bare. */
+:is(.ts-shell, .ts-onboarding, .ts-dialog) :is(input:not([type=checkbox], [type=radio], [type=file], [type=color], [type=range], [type=hidden]), select, textarea):not(.ts-field-bare) {
+  border: 1.5px solid var(--border) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  font-family: 'Inter', sans-serif !important;
+  line-height: 1.4;
+  color: var(--dark);
+  min-height: 36px;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+:is(.ts-shell, .ts-onboarding, .ts-dialog) :is(input, select, textarea):not(.ts-field-bare):focus {
+  border-color: var(--purple) !important;
+  box-shadow: 0 0 0 3px rgba(107, 92, 231, 0.22) !important;   /* the focus indicator for fields, on mouse and keyboard */
+  outline: none !important;
+}
+:is(.ts-shell, .ts-onboarding, .ts-dialog) :is(input, select, textarea):not(.ts-field-bare):is(:disabled, [readonly]) {
+  background: var(--bg) !important;
+  color: var(--muted);
+}
+:is(.ts-shell, .ts-onboarding, .ts-dialog) :is(input, select, textarea):disabled { cursor: not-allowed; }
+:is(.ts-shell, .ts-onboarding, .ts-dialog) :is(input, select, textarea)[aria-invalid="true"] { border-color: var(--red) !important; }
+.ts-field-bare:focus-visible { outline: 2px solid var(--purple) !important; outline-offset: 4px; border-radius: 4px; }
+/* Buttons: inline outline:none (page kits, ui/Button) must not hide the keyboard focus ring. */
+button:focus-visible, a:focus-visible, [role="button"]:focus-visible { outline: 2px solid var(--purple) !important; outline-offset: 2px; }
 
 .ts-seg     { display: flex; gap: 6px; }
 .ts-seg-btn {

@@ -179,7 +179,7 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div style={s.wrap}>
+    <div className="ts-onboarding" style={s.wrap}>
       {/* Logo */}
       <img
         src="/brand/taxstory-lockup-horizontal-primary-on-light.svg"
@@ -240,7 +240,7 @@ export default function OnboardingWizard() {
                 </div>
               </div>
 
-              <button style={s.btnPri} onClick={nextStep1} disabled={saving}>
+              <button style={s.btnPri} onClick={nextStep1} disabled={saving} aria-busy={saving}>
                 {saving ? 'Saving…' : 'Continue →'}
               </button>
             </>
@@ -281,7 +281,7 @@ export default function OnboardingWizard() {
                 <button
                   style={{ ...s.btnPri, marginBottom:12, opacity: parsing ? .7 : 1 }}
                   onClick={handleParse}
-                  disabled={parsing || (!file && !useDemo)}
+                  disabled={parsing || (!file && !useDemo)} aria-busy={parsing}
                 >
                   {parsing ? '⏳ Parsing return…' : useDemo ? 'Load demo return →' : 'Parse PDF →'}
                 </button>
@@ -314,7 +314,7 @@ export default function OnboardingWizard() {
 
               <div style={{ display:'flex', gap:8 }}>
                 <button style={{ ...s.btnSec, flex:1 }} onClick={() => setStep(1)}>← Back</button>
-                <button style={{ ...s.btnPri, flex:2 }} onClick={nextStep2} disabled={saving || !parseResult}>
+                <button style={{ ...s.btnPri, flex:2 }} onClick={nextStep2} disabled={saving || !parseResult} aria-busy={saving}>
                   {saving ? 'Saving…' : 'Continue →'}
                 </button>
               </div>
@@ -381,7 +381,7 @@ export default function OnboardingWizard() {
 
               <div style={{ display:'flex', gap:8 }}>
                 <button style={{ ...s.btnSec, flex:1 }} onClick={() => setStep(2)}>← Back</button>
-                <button style={{ ...s.btnPri, flex:2 }} onClick={finish} disabled={saving}>
+                <button style={{ ...s.btnPri, flex:2 }} onClick={finish} disabled={saving} aria-busy={saving}>
                   {saving ? 'Setting up your account…' : '🚀 Launch TaxStory'}
                 </button>
               </div>

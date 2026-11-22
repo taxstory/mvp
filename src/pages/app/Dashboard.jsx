@@ -197,7 +197,7 @@ export default function Dashboard() {
                     <div style={{fontSize:'10px',color:'var(--muted)'}}>{timeAgo(c.created_at)}</div>
                   </div>
                 </div>
-                <span className={`ts-pill ${c.type==='ria'?'ts-p-amber':'ts-p-dark'}`}>{c.type?.toUpperCase()}</span>
+                <span className={`ts-pill ${c.type==='ria'?'ts-p-amber':'ts-p-dark'}`}>{c.type === 'ria' ? 'Planning' : 'Tax'}</span>
               </div>
             ))}
           </div>

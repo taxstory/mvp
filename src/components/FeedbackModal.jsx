@@ -53,6 +53,7 @@ export default function FeedbackModal({ onClose }) {
   return (
     /* Backdrop */
     <div
+      className="ts-dialog" role="dialog" aria-modal="true" aria-label="Report a bug or share feedback"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:1000,
         display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>

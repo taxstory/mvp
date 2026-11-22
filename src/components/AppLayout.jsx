@@ -181,7 +181,7 @@ export default function AppLayout() {
                 {statusText} · {profile?.firm_name || 'TaxStory'}
               </div>
             </div>
-            <button onClick={handleSignOut} disabled={signingOut} title="Sign out" aria-label="Sign out"
+            <button onClick={handleSignOut} disabled={signingOut} aria-busy={signingOut} title="Sign out" aria-label="Sign out"
               style={{ marginLeft: 'auto', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px',
                 background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.18)', borderRadius: 8,
                 color: '#fff', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: signingOut ? 'default' : 'pointer', opacity: signingOut ? .6 : 1 }}>

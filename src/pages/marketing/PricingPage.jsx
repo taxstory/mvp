@@ -103,7 +103,7 @@ function PlanCard({ plan }) {
         to="/signup"
         className={`text-center font-semibold px-6 py-3 rounded-xl text-sm transition-colors ${
           plan.highlight
-            ? 'bg-brand-purple hover:bg-purple-600 text-white'
+            ? 'bg-brand-purple hover:bg-brand-purple-hover text-white'
             : 'border border-brand-purple text-brand-purple hover:bg-brand-light'
         }`}
       >

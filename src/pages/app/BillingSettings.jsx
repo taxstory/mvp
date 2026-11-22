@@ -144,7 +144,7 @@ export function BillingPage() {
           <div className="ts-page-sub">Manage your plan, walkthrough credits, and payment details</div>
         </div>
         {isActive && subscription?.stripe_customer_id && (
-          <button className="ts-btn ts-btn-secondary ts-btn-sm" onClick={openPortal} disabled={portalLoading}>
+          <button className="ts-btn ts-btn-secondary ts-btn-sm" onClick={openPortal} disabled={portalLoading} aria-busy={portalLoading}>
             {portalLoading ? 'Opening…' : '↗ View invoices & payment method'}
           </button>
         )}
@@ -220,7 +220,7 @@ export function BillingPage() {
                       </div>
                     ) : (
                       <button className="ts-btn ts-btn-primary ts-btn-sm" style={{ width: '100%', justifyContent: 'center', fontSize: '11px' }}
-                        onClick={() => startCheckout(p.tier)} disabled={!!checkoutLoading}>
+                        onClick={() => startCheckout(p.tier)} disabled={!!checkoutLoading} aria-busy={checkoutLoading === p.tier}>
                         {checkoutLoading === p.tier ? '…' : 'Select plan'}
                       </button>
                     )}
@@ -300,7 +300,7 @@ export function BillingPage() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <span style={{ fontFamily: 'Playfair Display,serif', fontSize: '20px', fontWeight: 700, color: 'var(--dark)' }}>${pack.price}</span>
-                      <button className="ts-btn ts-btn-primary ts-btn-sm" onClick={() => buyCredits(pack)} disabled={!!creditsLoading} style={{ minWidth: '80px' }}>
+                      <button className="ts-btn ts-btn-primary ts-btn-sm" onClick={() => buyCredits(pack)} disabled={!!creditsLoading} aria-busy={creditsLoading === pack.id} style={{ minWidth: '80px' }}>
                         {creditsLoading === pack.id ? '…' : 'Buy'}
                       </button>
                     </div>
@@ -354,7 +354,7 @@ export function BillingPage() {
             </div>
           </div>
           {isActive && subscription?.stripe_customer_id ? (
-            <button className="ts-btn ts-btn-secondary ts-btn-sm" onClick={openPortal} disabled={portalLoading} style={{ flexShrink: 0 }}>
+            <button className="ts-btn ts-btn-secondary ts-btn-sm" onClick={openPortal} disabled={portalLoading} aria-busy={portalLoading} style={{ flexShrink: 0 }}>
               {portalLoading ? 'Opening…' : '↗ Open billing portal'}
             </button>
           ) : (
@@ -468,7 +468,7 @@ export function SettingsPage() {
           </div>
           <div className="ts-frow"><label className="ts-fl">Account email</label><input type="email" value={user?.email || ''} disabled style={{ background: 'var(--bg)', color: 'var(--muted)' }} /></div>
           {firmError && <div style={{ background: 'var(--color-red-light)', color: 'var(--color-red-dark)', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', marginBottom: '10px' }}>{firmError}</div>}
-          <button className="ts-btn ts-btn-primary ts-btn-sm" onClick={saveFirmProfile} disabled={firmSaving}>{firmSaved ? '✓ Saved' : firmSaving ? 'Saving…' : 'Save changes'}</button>
+          <button className="ts-btn ts-btn-primary ts-btn-sm" onClick={saveFirmProfile} disabled={firmSaving} aria-busy={firmSaving}>{firmSaved ? '✓ Saved' : firmSaving ? 'Saving…' : 'Save changes'}</button>
         </div>
         <div className="ts-card">
           <div className="ts-card-title">Branding</div>
@@ -512,7 +512,7 @@ export function SettingsPage() {
           <div className="ts-frow"><label className="ts-fl">Confirm password</label><input type="password" value={pwForm.confirm} onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))} placeholder="Repeat new password" /></div>
           {pwError && <div style={{ background: 'var(--color-red-light)', color: 'var(--color-red-dark)', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', marginBottom: '10px' }}>{pwError}</div>}
           {pwMsg   && <div style={{ background: 'var(--green-bg)', color: 'var(--green-dark)', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', marginBottom: '10px' }}>{pwMsg}</div>}
-          <button className="ts-btn ts-btn-primary ts-btn-sm" onClick={changePassword} disabled={pwSaving}>{pwSaving ? 'Updating…' : 'Update password'}</button>
+          <button className="ts-btn ts-btn-primary ts-btn-sm" onClick={changePassword} disabled={pwSaving} aria-busy={pwSaving}>{pwSaving ? 'Updating…' : 'Update password'}</button>
         </div>
         <div className="ts-card">
           <div className="ts-card-title">Email notifications</div>
@@ -530,7 +530,7 @@ export function SettingsPage() {
               <Toggle value={notifs[n.k]} onChange={() => setNotifs(p => ({ ...p, [n.k]: !p[n.k] }))} />
             </div>
           ))}
-          <button className="ts-btn ts-btn-secondary ts-btn-sm" style={{ marginTop: '12px' }} onClick={saveNotifications} disabled={notifSaving}>
+          <button className="ts-btn ts-btn-secondary ts-btn-sm" style={{ marginTop: '12px' }} onClick={saveNotifications} disabled={notifSaving} aria-busy={notifSaving}>
             {notifSaved ? '✓ Saved' : notifSaving ? 'Saving…' : 'Save preferences'}
           </button>
         </div>

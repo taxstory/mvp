@@ -109,6 +109,7 @@ export function Modal({
     >
       <div
         ref={dialogRef}
+        className="ts-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'ts-modal-title' : undefined}

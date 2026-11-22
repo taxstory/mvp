@@ -74,7 +74,7 @@ export default function LandingPage() {
             Plus next-year projections, so the conversation keeps going after the return is filed.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/signup" className="bg-brand-purple hover:bg-purple-600 text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors">
+            <Link to="/signup" className="bg-brand-purple hover:bg-brand-purple-hover text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors">
               Start Your Free 14-Day Trial
             </Link>
             <Link to="/how-it-works" className="border border-white/30 hover:border-white text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors">
@@ -168,7 +168,7 @@ export default function LandingPage() {
           <p className="text-gray-300 text-lg mb-2">Founding members get locked-in pricing, direct access to the product roadmap, and priority onboarding.</p>
           <p className="text-gray-400 text-sm mb-10">SOC 2 Type I compliance in progress. Your clients' data is handled the right way from day one.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/signup" className="bg-brand-purple hover:bg-purple-600 text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors">
+            <Link to="/signup" className="bg-brand-purple hover:bg-brand-purple-hover text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors">
               Claim Founding Member Access
             </Link>
             <Link to="/pricing" className="border border-white/30 hover:border-white text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors">
