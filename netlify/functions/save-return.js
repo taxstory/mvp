@@ -115,7 +115,8 @@ exports.handler = makeHandler([], async (event, { supabase, db, user, body }) =>
     if (source !== 'pdf') throw bad('Only PDF imports can replace figures');
     const figures = validateFigures(body.figures, PDF_KEYS);
     await getTaxReturn(db, body.replaceId, user.id, 'id, user_id');
-    const { error } = await db.from('tax_returns').update({ parsed_data: figures, tax_year: figures.taxYear || null, status: 'parsed', script_json: null }).eq('id', body.replaceId);
+    // Service role (the browser may only change notes — 05_access_control.sql); ownership checked just above and scoped here too.
+    const { error } = await supabase.from('tax_returns').update({ parsed_data: figures, tax_year: figures.taxYear || null, status: 'parsed', script_json: null }).eq('id', body.replaceId).eq('user_id', user.id);
     if (error) throw new Error(`Could not update return: ${error.message}`);
     // audio/video columns are system-managed (the database ignores browser writes to them), so clearing them needs the service role
     await supabase.from('tax_returns').update({ audio_url: null, audio_segments: null, pdf_summary_url: null }).eq('id', body.replaceId).eq('user_id', user.id);

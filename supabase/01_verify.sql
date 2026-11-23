@@ -93,6 +93,17 @@ checks as (
   from (values ('reserve_usage'),('refund_usage'),('grant_pack_credits'),('apply_subscription_state'),('roll_usage_period'),('start_audio_job'),
                ('reserve_vendor_budget'),('create_share_link_for'),('record_view_event'),('touch_portal'),('claim_job')) f(fn)
   union all
+  select 12, 'access control (05)', x.what,
+         case when x.ok then 'OK' else 'MISSING' end
+  from (values
+    ('privacy guards can run for signed-in users', coalesce((select bool_and(prosecdef) from pg_proc where proname in ('guard_client_contact','guard_link_contact') and pronamespace = 'public'::regnamespace), false)),
+    ('browser cannot insert tax returns',          not has_table_privilege('authenticated', 'public.tax_returns', 'insert')),
+    ('browser cannot insert planning projections', not has_table_privilege('authenticated', 'public.ria_projections', 'insert')),
+    ('profile billing flags protected',            exists (select 1 from pg_trigger where tgname = 'ts_protect_profile_columns')),
+    ('browser edit rules',                         exists (select 1 from pg_trigger where tgname = 'ts_a_browser_edit_rules')),
+    ('client must belong to the same firm',        exists (select 1 from pg_trigger where tgname = 'ts_same_firm_client'))
+  ) x(what, ok)
+  union all
   select 11, 'rls enabled', t.tbl,
          case when not exists (select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname=t.tbl) then 'MISSING'
               when (select c.relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname=t.tbl) then 'OK'

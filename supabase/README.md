@@ -6,7 +6,9 @@ Run in the Supabase SQL editor, in this order. Every script is safe to re-run an
 2. **`02_add_missing.sql`** — onboarding and video columns, buckets and storage policies.
 3. **`03_pii_guards.sql`** — database-side SSN/EIN refusal on every free-text column the browser writes; repair of brand colours saved as CSS variables.
 4. **`04_core_schema.sql`** — the core layer the server functions call (section C). Run it as one script.
-5. **`01_verify.sql`** again — every row should be `OK`. `MISSING` = not created; `EXPOSED` = a security setting is wrong.
+5. **`05_access_control.sql`** — fixes from the 23 Nov access-control audit (see below). **Required if you ran 04**: without it, signed-in users
+   cannot add or edit clients or send messages.
+6. **`01_verify.sql`** again — every row should be `OK`. `MISSING` = not created; `EXPOSED` = a security setting is wrong.
 
 ## A. Onboarding (`02_add_missing.sql`)
 - `profiles`: `practice_type`, `primary_use`, `brand_color`, `logo_url`, `onboarding_completed`, `onboarding_completed_at`
@@ -41,11 +43,20 @@ Rules it enforces:
 - **Storage paths** (`audio_url`, `video_url`, `pdf_summary_url`, …) on a return can be set only by the server.
 - **Stripe events** are processed once, and an older event arriving late never overwrites a newer subscription state.
 
+## D. Access control (`05_access_control.sql`)
+- Privacy guards on clients and messages run with the definer's rights (04 left them unable to run for signed-in users).
+- `founding_member` and `role` on a profile can only be changed by TaxStory, not the user.
+- Returns and planning projections are created only by server functions (which charge the allowance and check the plan).
+- Through the API a user can change only a return's or plan's notes, and a client's details (and revoke its portal link).
+- A return, message or plan can only name a client of the same firm.
+
 ## Testing
 `supabase/test/run.sh` builds a throwaway Postgres database shaped like production (`test/00_supabase_stub.sql` stands in for Supabase's
 `auth`/`storage` schemas and roles; `test/01_live_baseline.sql` reproduces the live tables as of 2026-11-18), applies 02 → 04 (04 twice, to prove
 it re-runs), runs `01_verify.sql`, then `test/10_functional.sql` (76 checks: credits, refunds, jobs, reaping, budgets, rate limits, share links,
-portal, Stripe ordering, and what a signed-in user is refused).
+portal, Stripe ordering, and what a signed-in user is refused), then `test/20_tenant_isolation.sql` on a fresh database: 79 checks in which
+Firm B (signed in) and an anonymous caller try to read, change, delete or plant data in Firm A's account, escalate their own plan or credits,
+and call server-only functions, plus checks that normal use still works. It also runs in GitHub Actions on every push.
 
     PGHOST=... PGPORT=... PGUSER=postgres supabase/test/run.sh
 

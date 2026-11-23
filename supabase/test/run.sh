@@ -7,10 +7,12 @@ DB=${TEST_DB:-ts_test}
 P="psql -v ON_ERROR_STOP=1 -q -X"
 $P -d postgres -c "drop database if exists $DB" -c "create database $DB" >/dev/null
 for f in supabase/test/00_supabase_stub.sql supabase_schema.sql supabase/test/01_live_baseline.sql supabase/02_add_missing.sql supabase/03_pii_guards.sql \
-         supabase/04_core_schema.sql supabase/04_core_schema.sql; do
+         supabase/04_core_schema.sql supabase/04_core_schema.sql supabase/05_access_control.sql supabase/05_access_control.sql; do
   $P -d $DB -f "$f" 2>&1 | grep -v NOTICE || true
 done
 bad=$($P -d $DB -tA -f supabase/01_verify.sql | grep -v '|OK$' || true)
 if [ -n "$bad" ]; then echo "Readiness check failed:"; echo "$bad"; exit 1; fi
 echo "Readiness check: all OK"
-$P -d $DB -f supabase/test/10_functional.sql 2>&1 | grep -v '^WARNING:  ok' 
+$P -d $DB -f supabase/test/10_functional.sql 2>&1 | grep -v '^WARNING:  ok'
+# Tenant isolation: a fresh database (the functional tests leave rows behind), attacks run as a real signed-in user and as anonymous.
+TEST_DB=${DB}_iso EXTRA_SQL=supabase/05_access_control.sql supabase/test/iso.sh | tail -1

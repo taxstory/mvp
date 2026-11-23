@@ -64,6 +64,7 @@ exports.handler = async (event) => {
         .from('tax_returns')
         .select('id, tax_year, file_name, status, created_at, audio_url, video_url, pdf_summary_url, parsed_data')
         .eq('client_id', client.id)
+        .eq('user_id', client.user_id)   // only this firm's returns, even if another account's row names this client
         .eq('status', 'audio_ready')  // only show completed walkthroughs to clients
         .order('tax_year', { ascending: false });
 
@@ -73,6 +74,7 @@ exports.handler = async (event) => {
         .from('video_share_links')
         .select('tax_return_id, token, is_active, expires_at')
         .eq('is_active', true)
+        .eq('firm_id', client.user_id)
         .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
         .in('tax_return_id', (returns || []).map(r => r.id));
 

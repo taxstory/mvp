@@ -15,3 +15,24 @@ jobs:
       - run: node --test tests/security/*.test.cjs tests/security/*.test.mjs
       - run: node tests/engine/run.mjs
       - run: node --test tests/parser/*.test.mjs
+
+  database-access-control:
+    # Builds a Postgres shaped like the Supabase project from supabase/*.sql, then runs the functional tests and the tenant-isolation
+    # attack suite (a real signed-in user and an anonymous caller trying to reach another firm's data). Any successful attack fails the build.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - run: supabase/test/run.sh

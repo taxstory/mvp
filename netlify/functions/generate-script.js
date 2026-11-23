@@ -92,7 +92,9 @@ exports.handler = makeHandler([], async (event, { supabase, db, user, body }) =>
   const { segments, rewritten, rejected } = composeScript(backbone, rewrites, model);
   const scriptText = segments.map(s => s.text).join(' ');
 
-  const { error } = await db.from('tax_returns').update({ script: scriptText, script_json: segments, status: 'script_ready' }).eq('id', taxReturnId).eq('user_id', user.id);
+  // Service role: the browser may only change a return's notes (05_access_control.sql). Ownership: scoped to this user, and the return was
+  // loaded through the user's own permissions above.
+  const { error } = await supabase.from('tax_returns').update({ script: scriptText, script_json: segments, status: 'script_ready' }).eq('id', taxReturnId).eq('user_id', user.id);
   if (error) throw new Error(`Could not save the script: ${error.message}`);
   await audit(supabase, user.id, 'script_generated', `${segments.length} verified sentences for ${taxReturnId} (${rewritten} polished, ${rejected} kept as written)${model.warnings.length ? `; ${model.warnings.length} data warning(s)` : ''}.`);
 

@@ -181,7 +181,7 @@ begin
 end $$;
 
 -- ── 8. what a signed-in user can and cannot do ──
-grant select, insert, update, delete on all tables in schema public to authenticated;   -- as Supabase does by default
+-- Supabase's default grants come from the stub's ALTER DEFAULT PRIVILEGES, so migrations' REVOKEs stand (do not re-grant here).
 set role authenticated;
 \o /dev/null
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false), set_config('request.jwt.claim.role', 'authenticated', false);

@@ -106,8 +106,9 @@ export default function SettingsPage() {
     const web = normalizeWebsite(website);
     if (web.error) { setSaving(false); setError(web.error); return; }
     setWebsite(web.value || '');
-    const { error: upsertErr } = await supabase.from('profiles').upsert({
-      id: user.id,
+    // UPDATE, not upsert: the profile row is created at sign-up and users have no INSERT permission on profiles, so the upsert was refused
+    // by row-level security ("new row violates row-level security policy") and Settings never saved.
+    const { error: upsertErr } = await supabase.from('profiles').update({
       firm_name:              firmName.trim(),
       phone:                  phone.trim(),
       website:                web.value,
@@ -116,7 +117,7 @@ export default function SettingsPage() {
       notif_video_complete:   notifVideoComplete,
       notif_credits_low:      notifCreditsLow,
       notif_message_received: notifMessageReceived,
-    });
+    }).eq('id', user.id);
     setSaving(false);
     if (upsertErr) { setError(upsertErr.message); return; }
     setSaved(true);

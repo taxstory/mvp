@@ -19,10 +19,14 @@ Perspective: a CPA importing a client's return, reviewing next year's projection
 - **Parser fixture test** (`tests/parser/`) in CI, seeded with the Drake 2025 layout; add real samples as they arrive (see `SAMPLE_RETURNS.md`).
 - **Audio credits:** confirmed from the code — every new voiceover charges a credit; the request key only prevents a double-click from charging twice. A "free re-generation within 24 hours" rule would have to go in the `start_audio_job` database function.
 
-## Open — need a decision or real-world data
-- **The PDF reader has never been tested on real tax-software output** (its own header says so). It matches printed IRS captions; Drake, Lacerte, ProConnect and CCH may lay them out differently. This is the biggest first-impression risk. Needs 3–5 redacted returns from each package.
-- **Only Form 1040 pages are read.** Schedules C, D, E and SE are not, so for an imported business client the projection cannot compute self-employment tax or the QBI deduction (now flagged on screen). Business clients should use manual entry until schedules are read.
-- **The projection holds everything flat.** A CPA cannot change next year's income, add a child, or model a raise without the planning modules (which are off). Consider a small "adjust next year" panel on the projection itself.
-- **Re-generating audio after an edit** — confirm whether it consumes another credit (decided inside the `start_audio_job` database function). CPAs will iterate; charging per attempt will feel punitive.
-- **One video at a time, rendered in the browser.** Fine for a pilot; in tax season a CPA with 50 clients will want "generate all" and server-side rendering.
-- **The walkthrough does not mention credits** (child tax credit, education credits) or why the refund changed versus last year — the two questions clients ask most.
+## Status of the open items (checked against the code, 23 Nov 2026)
+
+| Item | Status |
+|---|---|
+| Projection held everything flat | **Done.** "Adjust next year" panel on the projection (income changes, capital gains, children) |
+| Walkthrough didn't mention credits or the change vs last year | **Done.** Dependent and other credits are narrated; last year's refund or balance due is mentioned when that return is in TaxStory |
+| Only Form 1040 pages were read | **Partly done.** Summary lines from Schedules 1, 2 and D are read when the PDF includes them (business and rental income, SE tax, short/long-term gains). Line-level Schedule C, E and SE detail is not read; if Schedule 1 is missing, the screen says SE tax and QBI are not projected |
+| PDF reader untested on real tax-software output | **Still open.** One synthetic Drake 2025 layout is in the parser tests; Lacerte, ProConnect, CCH and UltraTax have not been seen. Needs 3–5 redacted returns from each (`SAMPLE_RETURNS.md`) |
+| Engine verified against independent results | **Still open.** 7 of 35 test returns verified; 28 pending independently computed figures |
+| Re-generating audio after an edit | **Decision needed.** Confirmed: every voiceover charges a credit. A free re-generation window would go in the `start_audio_job` database function |
+| One video at a time, rendered in the browser | **Still open.** Fine for a pilot; "generate all" and server-side rendering are tax-season needs |
