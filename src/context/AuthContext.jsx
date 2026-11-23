@@ -44,12 +44,14 @@ export function AuthProvider({ children }) {
     return data;
   }
 
-  async function signUp({ email, password, role, firmName }) {
+  // captchaToken: from <Captcha/>; Supabase checks it on the server once CAPTCHA protection is on (undefined = not sent).
+  async function signUp({ email, password, role, firmName, captchaToken }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { role, firm_name: firmName },
+        captchaToken: captchaToken || undefined,
         // The confirmation link lands on a real route (there is no /auth/callback page: it fell through to the home page and could
         // drop the sign-in). /dashboard sends a new user on to onboarding. Same origin as the reset link below.
         emailRedirectTo: `${window.location.origin}/dashboard`,
@@ -58,8 +60,8 @@ export function AuthProvider({ children }) {
     return { data, error };
   }
 
-  async function signIn({ email, password }) {
-    return supabase.auth.signInWithPassword({ email, password });
+  async function signIn({ email, password, captchaToken }) {
+    return supabase.auth.signInWithPassword({ email, password, options: { captchaToken: captchaToken || undefined } });
   }
 
   async function signOut() {
@@ -68,9 +70,10 @@ export function AuthProvider({ children }) {
     setProfile(null);
   }
 
-  async function resetPassword(email) {
+  async function resetPassword(email, captchaToken) {
     return supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,   // must match the /reset-password route
+      captchaToken: captchaToken || undefined,
     });
   }
 

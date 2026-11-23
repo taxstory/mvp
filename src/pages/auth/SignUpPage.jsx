@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Icon, IconLabel } from '../../components/Icon';
+import { signUpOutcome } from '../../lib/authMessages';
+import { Captcha, captchaEnabled } from '../../components/Captcha';
 
 export default function SignUpPage() {
   const { signUp }  = useAuth();
@@ -10,6 +12,8 @@ export default function SignUpPage() {
   const [error,    setError]   = useState('');
   const [loading,  setLoading] = useState(false);
   const [success,  setSuccess] = useState(false);
+  const [captcha,  setCaptcha] = useState('');
+  const [attempt,  setAttempt] = useState(0);
 
   const update = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -17,14 +21,11 @@ export default function SignUpPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const { error } = await signUp({ email: form.email, password: form.password, role: form.role, firmName: form.firmName });
-    if (error) {
-      // A network failure means the sign-in service is unreachable — say that, not the raw "Failed to fetch (host)".
-      const down = /fetch|network/i.test(error.message || '') || error.name === 'AuthRetryableFetchError';
-      setError(down ? "We can't reach our sign-in service right now. Please try again in a few minutes." : error.message);
-      setLoading(false);
-    }
-    else setSuccess(true);
+    const { error } = await signUp({ email: form.email, password: form.password, role: form.role, firmName: form.firmName, captchaToken: captcha });
+    // An email that already has an account gets the same "check your email" screen as a new one (no account enumeration).
+    const out = signUpOutcome(error);
+    if (out.ok) setSuccess(true);
+    else { setError(out.error); setAttempt(a => a + 1); setLoading(false); }
   }
 
   if (success) return (
@@ -32,7 +33,7 @@ export default function SignUpPage() {
       <div className="max-w-sm text-center">
         <div className="ts-ico-tile ts-ico-tile-lg" style={{ marginBottom: 16 }}><Icon name="mail" size={24} /></div>
         <h2 className="font-serif text-2xl font-bold text-brand-dark mb-2">Check your email</h2>
-        <p className="text-gray-500 text-sm">We sent a confirmation link to <strong>{form.email}</strong>. Click it to activate your account and start your 14-day free trial.</p>
+        <p className="text-gray-500 text-sm">We sent a confirmation link to <strong>{form.email}</strong>. Click it to activate your account and start your 14-day free trial. Already have an account with this email? <Link to="/login" className="text-brand-purple hover:underline">Sign in</Link> instead.</p>
         <Link to="/login" className="block mt-6 text-sm text-brand-purple hover:underline">Back to sign in</Link>
       </div>
     </div>
@@ -69,7 +70,8 @@ export default function SignUpPage() {
               <input id="su-password" type="password" autoComplete="new-password" required minLength={8} value={form.password} onChange={update('password')}
                 className="input" placeholder="At least 8 characters" />
             </div>
-            <button type="submit" disabled={loading} aria-busy={loading}
+            <Captcha onToken={setCaptcha} resetKey={attempt} />
+            <button type="submit" disabled={loading || (captchaEnabled && !captcha)} aria-busy={loading}
               className="w-full bg-brand-purple hover:bg-brand-purple-hover text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50">
               {loading ? 'Creating account…' : 'Start Free Trial'}
             </button>

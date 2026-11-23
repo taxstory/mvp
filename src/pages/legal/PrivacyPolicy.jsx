@@ -34,7 +34,7 @@ export default function PrivacyPolicy() {
           </section>
           <section>
             <h2 className="font-semibold text-brand-dark text-xl mb-3">6. Third-party services</h2>
-            <p>We use the following third-party services: Supabase (database and auth), Stripe (payment processing), Anthropic (AI script generation), OpenAI (text-to-speech), Resend (transactional email), Sentry (error monitoring), and PostHog (analytics). Each service is governed by its own privacy policy.</p>
+            <p>We use the following third-party services: Supabase (database and auth), Netlify (website hosting and server functions), Stripe (payment processing), Anthropic (AI script generation), OpenAI (text-to-speech), Resend (transactional email), Sentry (error monitoring), and PostHog (analytics). Each service is governed by its own privacy policy.</p>
           </section>
           <section>
             <h2 className="font-semibold text-brand-dark text-xl mb-3">7. Contact</h2>

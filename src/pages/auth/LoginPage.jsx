@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { signInMessage } from '../../lib/authMessages';
+import { Captcha, captchaEnabled } from '../../components/Captcha';
 
 export default function LoginPage() {
   const { signIn } = useAuth();
@@ -9,13 +11,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error,    setError]    = useState('');
   const [loading,  setLoading]  = useState(false);
+  const [captcha,  setCaptcha]  = useState('');
+  const [attempt,  setAttempt]  = useState(0);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const { error } = await signIn({ email, password });
-    if (error) { setError(/fetch|network/i.test(error.message || '') ? "We can't reach our sign-in service right now. Please try again in a few minutes." : error.message); setLoading(false); }
+    const { error } = await signIn({ email, password, captchaToken: captcha });
+    if (error) { setError(signInMessage(error)); setAttempt(a => a + 1); setLoading(false); }
     else navigate('/dashboard');
   }
 
@@ -45,7 +49,8 @@ export default function LoginPage() {
             <div className="text-right">
               <Link to="/reset-password" className="text-xs text-brand-purple hover:underline">Forgot password?</Link>
             </div>
-            <button type="submit" disabled={loading} aria-busy={loading}
+            <Captcha onToken={setCaptcha} resetKey={attempt} />
+            <button type="submit" disabled={loading || (captchaEnabled && !captcha)} aria-busy={loading}
               className="w-full bg-brand-purple hover:bg-brand-purple-hover text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50">
               {loading ? 'Signing in…' : 'Sign In'}
             </button>
